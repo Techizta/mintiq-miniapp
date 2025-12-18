@@ -1,0 +1,406 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   CSS Variables
+   ============================================ */
+:root {
+  --color-primary: #0066FF;
+  --color-primary-light: #3385FF;
+  --color-primary-dark: #0052CC;
+  --color-gold: #FFD700;
+  --color-gold-dark: #E6AC00;
+  --color-btc: #F7931A;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  
+  --bg-primary: #0a0a0c;
+  --bg-secondary: #141417;
+  --bg-tertiary: #1c1c1f;
+  --bg-card: #1c1c1f;
+  
+  --text-primary: #ffffff;
+  --text-secondary: #a6a6aa;
+  --text-tertiary: #737379;
+  
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-color-light: rgba(255, 255, 255, 0.05);
+  
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --nav-height: 64px;
+  --header-height: 56px;
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================
+   Telegram Mini App Overrides
+   ============================================ */
+body.tg-webapp {
+  background: var(--tg-theme-bg-color, var(--bg-primary));
+}
+
+/* ============================================
+   Scrollbar Styles
+   ============================================ */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================
+   Component Styles
+   ============================================ */
+@layer components {
+  /* Cards */
+  .card {
+    @apply bg-dark-850 rounded-2xl border border-white/5 overflow-hidden;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-200 hover:border-white/10 hover:bg-dark-800 active:scale-[0.98];
+  }
+  
+  .card-glow {
+    @apply shadow-glow;
+  }
+  
+  /* Buttons */
+  .btn {
+    @apply px-6 py-3 rounded-xl font-semibold text-base transition-all duration-200 
+           flex items-center justify-center gap-2 active:scale-[0.97] disabled:opacity-50 
+           disabled:cursor-not-allowed;
+  }
+  
+  .btn-primary {
+    @apply btn bg-mint-gradient text-white shadow-glow hover:shadow-lg;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-dark-700 text-white border border-white/10 hover:bg-dark-600;
+  }
+  
+  .btn-gold {
+    @apply btn bg-gold-gradient text-dark-900 shadow-glow-gold hover:shadow-lg;
+  }
+  
+  .btn-danger {
+    @apply btn bg-danger text-white hover:bg-red-600;
+  }
+  
+  .btn-ghost {
+    @apply btn bg-transparent text-white hover:bg-white/5;
+  }
+  
+  .btn-sm {
+    @apply px-4 py-2 text-sm rounded-lg;
+  }
+  
+  .btn-lg {
+    @apply px-8 py-4 text-lg rounded-2xl;
+  }
+  
+  /* Inputs */
+  .input {
+    @apply w-full px-4 py-3 bg-dark-800 border border-white/10 rounded-xl 
+           text-white placeholder:text-dark-400 
+           focus:outline-none focus:border-mint-500 focus:ring-1 focus:ring-mint-500/50
+           transition-all duration-200;
+  }
+  
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full;
+  }
+  
+  .badge-primary {
+    @apply badge bg-mint-500/20 text-mint-400;
+  }
+  
+  .badge-gold {
+    @apply badge bg-gold-500/20 text-gold-400;
+  }
+  
+  .badge-success {
+    @apply badge bg-success/20 text-success;
+  }
+  
+  .badge-warning {
+    @apply badge bg-warning/20 text-warning;
+  }
+  
+  .badge-danger {
+    @apply badge bg-danger/20 text-danger;
+  }
+  
+  /* Glass Effect */
+  .glass {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+  }
+  
+  /* Text Gradients */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-mint-gradient;
+  }
+  
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent bg-gold-gradient;
+  }
+  
+  /* Shimmer Loading */
+  .shimmer {
+    @apply relative overflow-hidden;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+  
+  /* Tab Bar */
+  .tab-bar {
+    @apply fixed bottom-0 left-0 right-0 bg-dark-900/95 backdrop-blur-lg 
+           border-t border-white/5 z-50;
+    padding-bottom: var(--safe-area-bottom);
+  }
+  
+  /* Safe Areas */
+  .safe-top {
+    padding-top: var(--safe-area-top);
+  }
+  
+  .safe-bottom {
+    padding-bottom: calc(var(--nav-height) + var(--safe-area-bottom));
+  }
+  
+  /* Progress Bar */
+  .progress-bar {
+    @apply h-2 bg-dark-700 rounded-full overflow-hidden;
+  }
+  
+  .progress-bar-fill {
+    @apply h-full bg-mint-gradient rounded-full transition-all duration-500;
+  }
+  
+  /* Avatar */
+  .avatar {
+    @apply rounded-full bg-dark-700 flex items-center justify-center overflow-hidden;
+  }
+  
+  /* Divider */
+  .divider {
+    @apply h-px bg-white/5;
+  }
+  
+  /* Number Animations */
+  .number-animate {
+    @apply tabular-nums;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Smooth scroll */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+  
+  /* Touch optimizations */
+  .touch-pan-x {
+    touch-action: pan-x;
+  }
+  
+  .touch-pan-y {
+    touch-action: pan-y;
+  }
+  
+  /* Text shadow */
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  
+  .text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  }
+  
+  /* Glow effects */
+  .glow-mint {
+    filter: drop-shadow(0 0 8px rgba(0, 102, 255, 0.5));
+  }
+  
+  .glow-gold {
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5));
+  }
+  
+  .glow-green {
+    filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.5));
+  }
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+@keyframes coin-spin {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+@keyframes float-up {
+  0% { 
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% { 
+    transform: translateY(-100px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 102, 255, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(0, 102, 255, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 102, 255, 0);
+  }
+}
+
+@keyframes spin-wheel {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(var(--spin-degrees, 1800deg)); }
+}
+
+.animate-coin-spin {
+  animation: coin-spin 1s ease-in-out;
+}
+
+.animate-float-up {
+  animation: float-up 1s ease-out forwards;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-spin-wheel {
+  animation: spin-wheel var(--spin-duration, 5s) cubic-bezier(0.17, 0.67, 0.12, 0.99) forwards;
+}
+
+/* ============================================
+   Page Transitions
+   ============================================ */
+.page-enter {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 200ms, transform 200ms;
+}
+
+.page-exit {
+  opacity: 1;
+}
+
+.page-exit-active {
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+/* ============================================
+   Tier Colors
+   ============================================ */
+.tier-novice { color: #9CA3AF; }
+.tier-apprentice { color: #22C55E; }
+.tier-skilled { color: #3B82F6; }
+.tier-expert { color: #8B5CF6; }
+.tier-master { color: #F59E0B; }
+.tier-legend { color: #EF4444; }
+
+.tier-bg-novice { background-color: rgba(156, 163, 175, 0.2); }
+.tier-bg-apprentice { background-color: rgba(34, 197, 94, 0.2); }
+.tier-bg-skilled { background-color: rgba(59, 130, 246, 0.2); }
+.tier-bg-expert { background-color: rgba(139, 92, 246, 0.2); }
+.tier-bg-master { background-color: rgba(245, 158, 11, 0.2); }
+.tier-bg-legend { background-color: rgba(239, 68, 68, 0.2); }
