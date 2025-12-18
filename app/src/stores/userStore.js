@@ -39,4 +39,5 @@ export const useUserStore = create((set, get) => ({
   updateUser: (updates) => { const user = get().user; if (user) set({ user: normalize({ ...user, ...updates }) }); },
   clearUser: () => set({ user: null, lastFetch: null }),
   clearError: () => set({ error: null }),
+  refreshUser: async () => { return get().fetchUser(true); },
 }));

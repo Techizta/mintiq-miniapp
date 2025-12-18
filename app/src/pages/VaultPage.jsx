@@ -119,12 +119,12 @@ export default function VaultPage() {
           <div className="bg-dark-800 rounded-xl p-4 border border-white/5">
             <Lock size={20} className="text-orange-400 mb-2" />
             <p className="text-lg font-bold text-white">{formatSatz(vault?.total_inflow || 0)}</p>
-            <p className="text-xs text-dark-400">Total Inflow (sats)</p>
+            <p className="text-xs text-dark-400">Total Inflow (SATZ)</p>
           </div>
           <div className="bg-dark-800 rounded-xl p-4 border border-white/5">
             <Bitcoin size={20} className="text-red-400 mb-2" />
             <p className="text-lg font-bold text-white">{formatSatz(vault?.total_outflow || 0)}</p>
-            <p className="text-xs text-dark-400">Total Outflow (sats)</p>
+            <p className="text-xs text-dark-400">Total Outflow (SATZ)</p>
           </div>
         </div>
       </div>

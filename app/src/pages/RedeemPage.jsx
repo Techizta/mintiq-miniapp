@@ -217,16 +217,16 @@ export default function RedeemPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-dark-400">Gross amount</span>
-                      <span className="text-white">{getSatoshisForSatz(amountNum).toLocaleString()} sats</span>
+                      <span className="text-white">{getSatoshisForSatz(amountNum).toLocaleString()} SATZ</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-dark-400">Network fee ({redemptionInfo?.feePercent}%)</span>
-                      <span className="text-danger">-{(getSatoshisForSatz(amountNum) - netSatoshis).toLocaleString()} sats</span>
+                      <span className="text-danger">-{(getSatoshisForSatz(amountNum) - netSatoshis).toLocaleString()} SATZ</span>
                     </div>
                     <div className="h-px bg-white/10 my-2" />
                     <div className="flex justify-between font-medium">
                       <span className="text-white">Net amount</span>
-                      <span className="text-btc">{netSatoshis.toLocaleString()} sats</span>
+                      <span className="text-btc">{netSatoshis.toLocaleString()} SATZ</span>
                     </div>
                   </div>
                 </motion.div>

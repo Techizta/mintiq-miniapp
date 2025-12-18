@@ -69,6 +69,7 @@ function App() {
             <Route path="predict/:questId" element={<QuestDetailPage />} />
             <Route path="earn" element={<EarnPage />} />
             <Route path="earn/tasks" element={<TasksPage />} />
+            <Route path="premium" element={<PremiumPage />} />
             <Route path="wallet" element={<WalletPage />} />
             <Route path="wallet/transactions" element={<TransactionsPage />} />
             <Route path="wallet/redeem" element={<RedeemPage />} />

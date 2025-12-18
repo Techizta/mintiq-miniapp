@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  CheckCircle, 
-  ExternalLink, 
-  Clock, 
+import {
+  CheckCircle,
+  ExternalLink,
+  Clock,
   Gift,
   Loader2
 } from 'lucide-react';
@@ -14,15 +15,31 @@ import telegram from '../services/telegram';
 import { formatSatz, getTaskTypeIcon } from '../utils/helpers';
 
 export default function TasksPage() {
+  const [searchParams] = useSearchParams();
+  const highlightTaskId = searchParams.get('task');
   const { tasks, isLoading, fetchTasks, startTask, verifyTask } = useEarnStore();
   const { addBalance } = useUserStore();
   const { showToast, showCelebration } = useUIStore();
   const [processingTask, setProcessingTask] = useState(null);
   const [taskTimers, setTaskTimers] = useState({});
+  const taskRefs = useRef({});
 
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  // Scroll to highlighted task when loaded
+  useEffect(() => {
+    if (highlightTaskId && tasks.length > 0 && !isLoading) {
+      setTimeout(() => {
+        const taskElement = taskRefs.current[highlightTaskId];
+        if (taskElement) {
+          taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          telegram.hapticImpact('medium');
+        }
+      }, 300);
+    }
+  }, [highlightTaskId, tasks, isLoading]);
 
   const handleStartTask = async (task) => {
     telegram.hapticImpact('light');
@@ -41,7 +58,7 @@ export default function TasksPage() {
           ...prev,
           [task.id]: task.required_seconds || 30
         }));
-        
+
         const interval = setInterval(() => {
           setTaskTimers(prev => {
             const remaining = (prev[task.id] || 0) - 1;
@@ -70,7 +87,7 @@ export default function TasksPage() {
 
     try {
       const result = await verifyTask(task.id);
-      
+
       if (result.success) {
         addBalance(task.user_reward_satz);
         telegram.hapticNotification('success');
@@ -137,6 +154,8 @@ export default function TasksPage() {
                 timer={taskTimers[task.id]}
                 onStart={() => handleStartTask(task)}
                 onVerify={() => handleVerifyTask(task)}
+                isHighlighted={String(task.id) === String(highlightTaskId)}
+                ref={(el) => { taskRefs.current[task.id] = el; }}
               />
             ))}
           </AnimatePresence>
@@ -166,16 +185,19 @@ export default function TasksPage() {
   );
 }
 
-function TaskCard({ task, index, isProcessing, timer, onStart, onVerify }) {
+import { forwardRef } from 'react';
+
+const TaskCard = forwardRef(function TaskCard({ task, index, isProcessing, timer, onStart, onVerify, isHighlighted }, ref) {
   const canVerify = timer === 0 || timer === undefined;
-  
+
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -100 }}
       transition={{ delay: index * 0.05 }}
-      className="card p-4"
+      className={`card p-4 ${isHighlighted ? 'ring-2 ring-mint-500 bg-mint-500/10' : ''}`}
     >
       <div className="flex items-start gap-3">
         {/* Icon */}
@@ -187,7 +209,7 @@ function TaskCard({ task, index, isProcessing, timer, onStart, onVerify }) {
         <div className="flex-1 min-w-0">
           <h4 className="font-semibold text-white mb-1">{task.name}</h4>
           <p className="text-sm text-dark-400 mb-2 line-clamp-2">{task.description}</p>
-          
+
           {/* Reward */}
           <div className="flex items-center gap-2">
             <Gift size={14} className="text-gold-400" />
@@ -239,4 +261,4 @@ function TaskCard({ task, index, isProcessing, timer, onStart, onVerify }) {
       </div>
     </motion.div>
   );
-}
+});

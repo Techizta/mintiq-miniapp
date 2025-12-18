@@ -61,7 +61,7 @@ export default function EarnPage() {
       const result = await api.post('/api/miniapp/earn/daily/claim');
       if (result.success) {
         telegram.hapticNotification('success');
-        showToast(`₿ +${result.satsEarned} sats earned!`, 'success');
+        showToast(`₿ +${result.satsEarned} SATZ earned!`, 'success');
         setEarnData(prev => ({
           ...prev,
           daily: { ...prev.daily, canClaim: false, streak: result.streak }
@@ -83,7 +83,7 @@ export default function EarnPage() {
         const result = await api.post('/api/miniapp/earn/watch-ad');
         if (result.success) {
           telegram.hapticNotification('success');
-          showToast(`₿ +${result.satsEarned} sats earned!`, 'success');
+          showToast(`₿ +${result.satsEarned} SATZ earned!`, 'success');
           setEarnData(prev => ({
             ...prev,
             ads: { watched: prev.ads.watched + 1, remaining: result.adsRemaining, isLoading: false }
@@ -91,7 +91,7 @@ export default function EarnPage() {
           refreshUser();
         }
       } else {
-        showToast('Watch the full ad to earn sats', 'warning');
+        showToast('Watch the full ad to earn SATZ', 'warning');
       }
     } catch (error) {
       showToast(error.message || 'No ads available', 'error');
@@ -110,7 +110,7 @@ export default function EarnPage() {
         setSpinResult(result.reward);
         setTimeout(() => {
           telegram.hapticNotification('success');
-          showToast(`🎰 +${result.reward} sats won!`, 'success');
+          showToast(`🎰 +${result.reward} SATZ won!`, 'success');
           setSpinResult(null);
           setEarnData(prev => ({
             ...prev,
@@ -132,7 +132,7 @@ export default function EarnPage() {
       const result = await api.post('/api/miniapp/earn/premium/claim-drop');
       if (result.success) {
         telegram.hapticNotification('success');
-        showToast(`👑 +${result.satsEarned} sats Premium Drop!`, 'success');
+        showToast(`👑 +${result.satsEarned} SATZ Premium Drop!`, 'success');
         setEarnData(prev => ({
           ...prev,
           premium: { ...prev.premium, canClaimDrop: false, nextDropDays: 7 }
@@ -151,7 +151,7 @@ export default function EarnPage() {
       const result = await api.post('/api/miniapp/earn/comeback');
       if (result.success) {
         telegram.hapticNotification('success');
-        showToast(`🎁 Welcome back! +${result.satsEarned} sats!`, 'success');
+        showToast(`🎁 Welcome back! +${result.satsEarned} SATZ!`, 'success');
         setEarnData(prev => ({ ...prev, comeback: { eligible: false, amount: 0 } }));
         refreshUser();
       }
@@ -214,7 +214,7 @@ export default function EarnPage() {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold text-white">{(user?.satz_balance || 0).toLocaleString()}</span>
-            <span className="text-orange-400 font-medium">sats</span>
+            <span className="text-orange-400 font-medium">SATZ</span>
           </div>
           <p className="text-dark-400 text-sm mt-1">≈ ${satsToUsd(user?.satz_balance || 0)} USD</p>
         </motion.div>
@@ -234,7 +234,7 @@ export default function EarnPage() {
                 <p className="text-sm text-dark-400">We missed you! Claim your bonus</p>
               </div>
               <button onClick={handleClaimComeback} className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-xl">
-                +{earnData.comeback.amount} sats
+                +{earnData.comeback.amount} SATZ
               </button>
             </div>
           </motion.div>
@@ -254,7 +254,7 @@ export default function EarnPage() {
                 <p className="text-sm text-dark-400">Your weekly SATZ are ready</p>
               </div>
               <button onClick={handleClaimPremiumDrop} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-xl">
-                +600 sats
+                +600 SATZ
               </button>
             </div>
           </motion.div>
@@ -264,8 +264,27 @@ export default function EarnPage() {
       <div className="px-4 py-2 space-y-3">
         <div className="flex items-center gap-2 mt-2 mb-1">
           <Bitcoin size={16} className="text-orange-400" />
-          <h2 className="text-sm font-semibold text-dark-400 uppercase tracking-wide">Earn Real Sats</h2>
+          <h2 className="text-sm font-semibold text-dark-400 uppercase tracking-wide">Earn Real SATZ</h2>
         </div>
+        
+        {/* Tasks - Advertiser Tasks */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          onClick={() => navigate("/earn/tasks")}
+          className="bg-gradient-to-r from-blue-500/10 to-cyan-500/5 border border-blue-500/20 rounded-xl p-4 cursor-pointer hover:border-blue-500/40 transition-all">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center">
+              <CheckCircle size={28} className="text-blue-400" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-white">Complete Tasks</h3>
+                <span className="px-2 py-0.5 bg-blue-500/20 rounded text-xs text-blue-400 font-medium">50-200 SATZ</span>
+              </div>
+              <p className="text-sm text-dark-400 mt-0.5">Join channels, visit sites, follow accounts</p>
+            </div>
+            <ChevronRight size={20} className="text-dark-500" />
+          </div>
+        </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           className="bg-gradient-to-r from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-xl p-4">
@@ -276,9 +295,9 @@ export default function EarnPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-white">Watch Ads</h3>
-                <span className="px-2 py-0.5 bg-green-500/20 rounded text-xs text-green-400 font-medium">+2 sats</span>
+                <span className="px-2 py-0.5 bg-green-500/20 rounded text-xs text-green-400 font-medium">+2 SATZ</span>
               </div>
-              <p className="text-sm text-dark-400 mt-0.5">{earnData.ads.remaining}/10 remaining • +20 sats/day max</p>
+              <p className="text-sm text-dark-400 mt-0.5">{earnData.ads.remaining}/10 remaining • +20 SATZ/day max</p>
               <div className="flex gap-1 mt-2">
                 {[...Array(10)].map((_, i) => (
                   <div key={i} className={`h-1.5 flex-1 rounded-full ${i < earnData.ads.watched ? 'bg-green-500' : 'bg-dark-700'}`} />
@@ -308,7 +327,7 @@ export default function EarnPage() {
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-white">Daily Check-in</h3>
                 <span className="px-2 py-0.5 bg-yellow-500/20 rounded text-xs text-yellow-400 font-medium">
-                  +{earnData.premium.isPremium ? '10' : '5'} sats
+                  +{earnData.premium.isPremium ? '10' : '5'} SATZ
                 </span>
                 {earnData.daily.streak > 0 && (
                   <span className="px-2 py-0.5 bg-orange-500/20 rounded text-xs text-orange-400">🔥 {earnData.daily.streak}</span>
@@ -336,7 +355,7 @@ export default function EarnPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-white">Spin Wheel</h3>
-                <span className="px-2 py-0.5 bg-purple-500/20 rounded text-xs text-purple-400 font-medium">1-20 sats</span>
+                <span className="px-2 py-0.5 bg-purple-500/20 rounded text-xs text-purple-400 font-medium">1-20 SATZ</span>
               </div>
               <p className="text-sm text-dark-400 mt-0.5">{earnData.spin.canSpin ? 'Ready to spin!' : 'Come back tomorrow'}</p>
             </div>
@@ -363,7 +382,7 @@ export default function EarnPage() {
                 <h3 className="font-semibold text-white">Win Predictions</h3>
                 <span className="px-2 py-0.5 bg-purple-500/20 rounded text-xs text-purple-400 font-medium">Up to 2x</span>
               </div>
-              <p className="text-sm text-dark-400 mt-0.5">Bet sats, predict correctly, win big!</p>
+              <p className="text-sm text-dark-400 mt-0.5">Bet SATZ, predict correctly, win big!</p>
             </div>
             <ChevronRight size={20} className="text-dark-500" />
           </div>
@@ -384,8 +403,8 @@ export default function EarnPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-white">Premium Membership</h3>
-                  <p className="text-sm text-dark-400 mt-0.5">600 sats/week • 2x daily bonus • No ads</p>
-                  <p className="text-xs text-yellow-400 mt-1">Just $4.99/month → ~2,850 sats/month value!</p>
+                  <p className="text-sm text-dark-400 mt-0.5">600 SATZ/week • 2x daily bonus • No ads</p>
+                  <p className="text-xs text-yellow-400 mt-1">Just $4.99/month → ~2,850 SATZ/month value!</p>
                 </div>
                 <span className="text-yellow-400 font-bold">$4.99</span>
               </div>
@@ -407,9 +426,9 @@ export default function EarnPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-white">Invite Friends</h3>
-                <span className="px-2 py-0.5 bg-mint-500/20 rounded text-xs text-mint-400 font-medium">+25 sats + 10%</span>
+                <span className="px-2 py-0.5 bg-mint-500/20 rounded text-xs text-mint-400 font-medium">+25 SATZ + 10%</span>
               </div>
-              <p className="text-sm text-dark-400 mt-0.5">25 sats bonus + 10% of their earnings forever</p>
+              <p className="text-sm text-dark-400 mt-0.5">25 SATZ bonus + 10% of their earnings forever</p>
             </div>
             <button onClick={() => {
                 telegram.hapticImpact('light');
@@ -430,7 +449,7 @@ export default function EarnPage() {
               <h4 className="font-medium text-white text-sm">How it works</h4>
               <p className="text-dark-400 text-xs mt-1 leading-relaxed">
                 Every SATZ = 1 real Bitcoin satoshi. Stack sats daily through ads, predictions, and bonuses. 
-                Withdraw to your Bitcoin wallet at 10,000 sats (~$10).
+                Withdraw to your Bitcoin wallet at 10,000 SATZ (~$10).
               </p>
             </div>
           </div>
