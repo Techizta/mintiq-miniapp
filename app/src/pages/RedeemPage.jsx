@@ -48,8 +48,8 @@ export default function RedeemPage() {
       console.error('Failed to fetch redemption info:', error);
       // Mock data
       setRedemptionInfo({
-        rate: 0.00000564,
-        minAmount: 100000,
+        rate: 1.0, // 1 SATZ = 1 satoshi
+        minAmount: 50000,
         feePercent: 2,
         estimatedTime: '24-72 hours',
       });
@@ -65,7 +65,7 @@ export default function RedeemPage() {
 
   const getSatoshisForSatz = (satzAmount) => {
     if (!redemptionInfo?.rate || !satzAmount) return 0;
-    return Math.floor(satzAmount * redemptionInfo.rate * 100000000);
+    return satzAmount; // 1:1 fixed rate
   };
 
   const getNetSatoshis = (satzAmount) => {
@@ -217,16 +217,16 @@ export default function RedeemPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-dark-400">Gross amount</span>
-                      <span className="text-white">{getSatoshisForSatz(amountNum).toLocaleString()} SATZ</span>
+                      <span className="text-white">{getSatoshisForSatz(amountNum).toLocaleString()} satoshis</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-dark-400">Network fee ({redemptionInfo?.feePercent}%)</span>
-                      <span className="text-danger">-{(getSatoshisForSatz(amountNum) - netSatoshis).toLocaleString()} SATZ</span>
+                      <span className="text-danger">-{(getSatoshisForSatz(amountNum) - netSatoshis).toLocaleString()} satoshis</span>
                     </div>
                     <div className="h-px bg-white/10 my-2" />
                     <div className="flex justify-between font-medium">
                       <span className="text-white">Net amount</span>
-                      <span className="text-btc">{netSatoshis.toLocaleString()} SATZ</span>
+                      <span className="text-btc">{netSatoshis.toLocaleString()} satoshis</span>
                     </div>
                   </div>
                 </motion.div>

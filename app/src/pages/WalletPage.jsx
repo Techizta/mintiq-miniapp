@@ -30,7 +30,7 @@ export default function WalletPage() {
   const canRedeem = balance >= LIMITS.MIN_REDEMPTION;
   
   // Approximate USD value (1 SATZ ≈ $0.0001)
-  const usdValue = (balance * 0.0001).toFixed(2);
+  const usdValue = ((balance / 100000000) * 100000).toFixed(2);
 
   const stats = [
     { label: 'Total Earned', value: user?.total_earned || 0, icon: TrendingUp, color: 'text-success' },

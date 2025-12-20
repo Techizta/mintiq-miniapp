@@ -1,5 +1,6 @@
 /**
  * MintIQ Constants
+ * Updated for 1:1 Peg Model: 1 SATZ = 1 Satoshi (Always)
  */
 
 // ============================================
@@ -8,8 +9,8 @@
 
 export const APP_CONFIG = {
   name: 'MintIQ',
-  tagline: 'Predict. Earn. Connect.',
-  version: '1.0.0',
+  tagline: '1 SATZ = 1 Satoshi. Real Bitcoin Value.',
+  version: '2.0.0',
   botUsername: 'MintIQBot',
   website: 'https://mintiq.world',
   support: 'support@mintiq.world',
@@ -25,35 +26,38 @@ export const API_CONFIG = {
 };
 
 // ============================================
-// LIMITS & THRESHOLDS
+// LIMITS & THRESHOLDS - Updated for 1:1 peg
 // ============================================
 
 export const LIMITS = {
   MIN_BET: 10,
-  MAX_BET: 1000000,
-  MIN_CHALLENGE_STAKE: 500,
-  MIN_REDEMPTION: 100000,
-  MAX_ADS_PER_DAY: 5,
+  MAX_BET: 100000,
+  MIN_CHALLENGE_STAKE: 25,
+  MIN_REDEMPTION: 50000,       // 50,000 SATZ = 50,000 sats (~$50)
+  MAX_ADS_PER_DAY: 10,
   MAX_FREE_PREDICTIONS: 1,
-  BALANCE_PROTECTION: 50, // Can't bet last 50 SATZ
+  BALANCE_PROTECTION: 50,
+  USER_DAILY_CAP: 5000,        // Max SATZ per user per day
 };
 
 // ============================================
-// REWARDS
+// REWARDS - Updated for 1:1 peg (sustainable)
 // ============================================
 
 export const REWARDS = {
-  WELCOME_BONUS: 500,
-  REFERRAL_BONUS_REFERRER: 50,
-  REFERRAL_BONUS_REFEREE: 100,
-  DAILY_LOGIN_BASE: 25,
-  WEEKLY_BONUS: 500,
-  COMEBACK_BONUS: 200,
-  MYSTERY_BOX_MIN: 10,
-  MYSTERY_BOX_MAX: 500,
-  AD_REWARD_MIN: 20,
-  AD_REWARD_MAX: 50,
+  WELCOME_BONUS: 250,          // ~$0.25
+  REFERRAL_BONUS_REFERRER: 100, // ~$0.10
+  REFERRAL_BONUS_REFEREE: 150,  // ~$0.15
+  DAILY_LOGIN_BASE: 10,        // Day 1
+  WEEKLY_BONUS: 200,           // 7-day milestone
+  COMEBACK_BONUS: 100,         // ~$0.10
+  MYSTERY_BOX_MIN: 5,
+  MYSTERY_BOX_MAX: 2500,
+  AD_REWARD: 2,                // Fixed 2 SATZ per ad
   FREE_PREDICTION_VALUE: 50,
+  FIRST_TASK_BONUS: 200,       // ~$0.20
+  FIRST_PREDICTION_BONUS: 100, // ~$0.10
+  PREMIUM_WEEKLY_DROP: 600,    // ~$0.60/week
 };
 
 // ============================================
@@ -61,32 +65,33 @@ export const REWARDS = {
 // ============================================
 
 export const FEES = {
-  TREASURY_FEE: 0.10,
-  VAULT_SHARE: 0.50,
-  REDEMPTION_FEE: 0.02,
-  REFERRAL_COMMISSION: 0.07,
+  TREASURY_FEE: 0.05,          // 5% on predictions
+  VAULT_SHARE: 0.50,           // 50% of revenue to vault
+  REDEMPTION_FEE: 0.02,        // 2% redemption fee
+  REFERRAL_COMMISSION: 0.07,   // 7% lifetime commission
 };
 
 // ============================================
-// STREAK REWARDS
+// STREAK REWARDS - Updated for sustainability
 // ============================================
 
 export const STREAK_REWARDS = {
-  1: 25,
-  2: 50,
-  3: 100,
-  4: 150,
-  5: 250,
-  6: 400,
-  7: 750,
+  1: 10,    // ~$0.01
+  2: 20,    // ~$0.02
+  3: 35,    // ~$0.035
+  4: 50,    // ~$0.05
+  5: 75,    // ~$0.075
+  6: 100,   // ~$0.10
+  7: 150,   // ~$0.15
 };
 
 export const MILESTONE_REWARDS = {
-  7: 500,    // Weekly bonus
-  14: 1000,
-  30: 5000,
-  60: 10000,
-  100: 15000,
+  7: 200,      // 🔥 Week Warrior
+  14: 400,     // ⚡ Fortnight Fighter
+  30: 1000,    // 👑 Monthly Master
+  60: 2500,    // 💎 Diamond Hands
+  100: 5000,   // 🏆 Century Legend
+  365: 25000,  // 🌟 Year One OG
 };
 
 // ============================================
@@ -95,11 +100,11 @@ export const MILESTONE_REWARDS = {
 
 export const TIERS = [
   { id: 'novice', name: 'Novice', points: 0, multiplier: 1.0, color: '#9CA3AF' },
-  { id: 'apprentice', name: 'Apprentice', points: 500, multiplier: 1.2, color: '#22C55E' },
-  { id: 'skilled', name: 'Skilled', points: 2000, multiplier: 1.5, color: '#3B82F6' },
-  { id: 'expert', name: 'Expert', points: 5000, multiplier: 1.8, color: '#8B5CF6' },
-  { id: 'master', name: 'Master', points: 15000, multiplier: 2.2, color: '#F59E0B' },
-  { id: 'legend', name: 'Legend', points: 50000, multiplier: 3.0, color: '#EF4444' },
+  { id: 'apprentice', name: 'Apprentice', points: 500, multiplier: 1.1, color: '#22C55E' },
+  { id: 'skilled', name: 'Skilled', points: 2000, multiplier: 1.2, color: '#3B82F6' },
+  { id: 'expert', name: 'Expert', points: 5000, multiplier: 1.3, color: '#8B5CF6' },
+  { id: 'master', name: 'Master', points: 15000, multiplier: 1.5, color: '#F59E0B' },
+  { id: 'legend', name: 'Legend', points: 50000, multiplier: 2.0, color: '#EF4444' },
 ];
 
 // ============================================
@@ -125,43 +130,47 @@ export const TASK_TYPES = {
     name: 'Join Channel',
     icon: '📢',
     description: 'Join a Telegram channel',
+    reward: 100,
   },
   website_visit: {
     id: 'website_visit',
     name: 'Visit Website',
     icon: '🌐',
     description: 'Visit a website',
+    reward: 50,
   },
   twitter_follow: {
     id: 'twitter_follow',
     name: 'Follow Twitter',
     icon: '🐦',
     description: 'Follow on Twitter/X',
+    reward: 150,
   },
   bot_start: {
     id: 'bot_start',
     name: 'Start Bot',
     icon: '🤖',
     description: 'Start a Telegram bot',
+    reward: 75,
   },
 };
 
 // ============================================
-// SPIN WHEEL CONFIG
+// SPIN WHEEL CONFIG - Lower rewards
 // ============================================
 
 export const SPIN_WHEEL = {
   segments: [
-    { value: 10, color: '#3B82F6', label: '10' },
-    { value: 15, color: '#22C55E', label: '15' },
-    { value: 20, color: '#8B5CF6', label: '20' },
-    { value: 25, color: '#F59E0B', label: '25' },
-    { value: 30, color: '#EF4444', label: '30' },
-    { value: 40, color: '#EC4899', label: '40' },
-    { value: 50, color: '#14B8A6', label: '50' },
-    { value: 100, color: '#FFD700', label: '100' },
+    { value: 1, color: '#3B82F6', label: '1' },
+    { value: 2, color: '#22C55E', label: '2' },
+    { value: 3, color: '#8B5CF6', label: '3' },
+    { value: 5, color: '#F59E0B', label: '5' },
+    { value: 7, color: '#EF4444', label: '7' },
+    { value: 10, color: '#EC4899', label: '10' },
+    { value: 15, color: '#14B8A6', label: '15' },
+    { value: 20, color: '#FFD700', label: '20' },
   ],
-  duration: 5000, // ms
+  duration: 5000,
   minSpins: 5,
 };
 
@@ -226,6 +235,7 @@ export const ROUTES = {
   BOOSTERS: '/boosters',
   STATS: '/stats',
   SETTINGS: '/settings',
+  PREMIUM: '/premium',
 };
 
 // ============================================
@@ -252,4 +262,31 @@ export const ERRORS = {
   ALREADY_BET: 'You have already placed a bet on this quest.',
   QUEST_CLOSED: 'This quest is no longer accepting bets.',
   GENERIC: 'Something went wrong. Please try again.',
+  DAILY_LIMIT: 'Daily earning limit reached. Come back tomorrow!',
+};
+
+// ============================================
+// 1:1 PEG HELPERS
+// ============================================
+
+export const satzToSatoshi = (satz) => satz; // 1:1 always!
+
+export const satzToUsd = (satz, btcPrice = 100000) => {
+  return (satz / 100000000) * btcPrice;
+};
+
+export const formatSatzWithUsd = (satz, btcPrice = 100000) => {
+  const usd = satzToUsd(satz, btcPrice);
+  return `${satz.toLocaleString()} SATZ (~$${usd.toFixed(2)})`;
+};
+
+// ============================================
+// VALUE PROPOSITION MESSAGES
+// ============================================
+
+export const VALUE_MESSAGES = {
+  pegExplanation: '1 SATZ = 1 real satoshi. No tricks, no dilution.',
+  redemptionClear: 'Redeem anytime at 1:1 rate (minus 2% fee).',
+  trustMessage: 'Unlike other apps, your SATZ never loses value.',
+  earnReal: 'Every SATZ you earn is backed by real Bitcoin.',
 };

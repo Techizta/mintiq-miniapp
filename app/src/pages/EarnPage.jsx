@@ -426,9 +426,9 @@ export default function EarnPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-white">Invite Friends</h3>
-                <span className="px-2 py-0.5 bg-mint-500/20 rounded text-xs text-mint-400 font-medium">+25 SATZ + 10%</span>
+                <span className="px-2 py-0.5 bg-mint-500/20 rounded text-xs text-mint-400 font-medium">+100 SATZ + 7%</span>
               </div>
-              <p className="text-sm text-dark-400 mt-0.5">25 SATZ bonus + 10% of their earnings forever</p>
+              <p className="text-sm text-dark-400 mt-0.5">100 SATZ bonus + 7% of their earnings forever</p>
             </div>
             <button onClick={() => {
                 telegram.hapticImpact('light');

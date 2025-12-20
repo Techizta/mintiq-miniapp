@@ -246,7 +246,7 @@ export default function HomePage() {
               <Users size={20} className="text-mint-400" />
             </div>
             <h3 className="font-semibold text-white">Invite Friends</h3>
-            <p className="text-sm text-dark-400">Earn 7% forever</p>
+            <p className="text-sm text-dark-400">Earn 7% lifetime</p>
           </Link>
         </motion.div>
 
@@ -262,7 +262,7 @@ export default function HomePage() {
                 <div>
                   <h3 className="font-bold text-white mb-1">Invite & Earn</h3>
                   <p className="text-sm text-white/80">
-                    Get 50 SATZ + 7% of their earnings forever!
+                    Get 100 SATZ + 7% of their earnings forever!
                   </p>
                 </div>
                 <ChevronRight size={24} className="text-white" />
