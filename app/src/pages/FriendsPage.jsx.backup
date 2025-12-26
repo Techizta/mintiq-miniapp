@@ -1,0 +1,527 @@
+/**
+ * MintIQ FriendsPage - FIXED VERSION
+ * 
+ * FIXES:
+ * - Tiered commission display (3%→4%→5%→7%)
+ * - Correct new user bonus (250 SATZ)
+ * - Add friend by username feature
+ */
+
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Users, 
+  Copy, 
+  Check, 
+  Share2, 
+  Gift, 
+  TrendingUp,
+  ChevronRight,
+  Crown,
+  Sparkles,
+  ArrowRight,
+  UserPlus,
+  Percent,
+  Search,
+  X
+} from 'lucide-react';
+import { useUserStore } from '../stores/userStore';
+import { useUIStore } from '../stores/uiStore';
+import api from '../services/api';
+import telegram from '../services/telegram';
+import { formatSatz, formatCompact, copyToClipboard } from '../utils/helpers';
+
+// ============================================
+// CONSTANTS - MATCHING BACKEND economics.js
+// ============================================
+
+const NEW_USER_BONUS = 250; // FIXED: Was 150, should be 250
+
+const REFERRAL_MILESTONE_BONUSES = [
+  { count: 1, bonus: 100, label: 'First Friend' },
+  { count: 5, bonus: 500, label: '5 Friends' },
+  { count: 10, bonus: 1500, label: '10 Friends' },
+  { count: 25, bonus: 5000, label: '25 Friends' },
+  { count: 50, bonus: 15000, label: '50 Friends' },
+  { count: 100, bonus: 50000, label: '100 Friends' },
+];
+
+// FIXED: Tiered commission rates matching backend
+const COMMISSION_TIERS = [
+  { minReferrals: 0, maxReferrals: 9, rate: 3, label: 'Starter', color: '#6b7280' },
+  { minReferrals: 10, maxReferrals: 49, rate: 4, label: 'Growth', color: '#3b82f6' },
+  { minReferrals: 50, maxReferrals: 199, rate: 5, label: 'Pro', color: '#a855f7' },
+  { minReferrals: 200, maxReferrals: Infinity, rate: 7, label: 'Elite', color: '#f59e0b' },
+];
+
+function getCommissionTier(referralCount) {
+  return COMMISSION_TIERS.find(t => referralCount >= t.minReferrals && referralCount <= t.maxReferrals) || COMMISSION_TIERS[0];
+}
+
+export default function FriendsPage() {
+  const { user, fetchUser } = useUserStore();
+  const { showToast } = useUIStore();
+  
+  // State
+  const [copied, setCopied] = useState(false);
+  const [referrals, setReferrals] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('invite');
+  
+  // Add Friend state
+  const [showAddFriend, setShowAddFriend] = useState(false);
+  const [friendUsername, setFriendUsername] = useState('');
+  const [isAddingFriend, setIsAddingFriend] = useState(false);
+
+  // ============================================
+  // DATA FETCHING
+  // ============================================
+
+  useEffect(() => {
+    loadData();
+  }, []);
+  
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        fetchUser(true),
+        fetchReferrals(),
+        fetchStats()
+      ]);
+    } catch (e) {
+      console.error('Load error:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const fetchReferrals = async () => {
+    try {
+      const response = await api.get('/api/miniapp/referrals');
+      setReferrals(response.referrals || []);
+    } catch (e) {
+      console.error('Referrals fetch error:', e);
+    }
+  };
+  
+  const fetchStats = async () => {
+    try {
+      const response = await api.get('/api/miniapp/referrals/stats');
+      setStats(response);
+    } catch (e) {
+      console.error('Stats fetch error:', e);
+    }
+  };
+
+  // ============================================
+  // HANDLERS
+  // ============================================
+
+  const handleCopyLink = async () => {
+    const link = `https://t.me/MintIQBot?start=${user?.referral_code || 'ref'}`;
+    await copyToClipboard(link);
+    setCopied(true);
+    telegram.hapticNotification('success');
+    showToast('Link copied!', 'success');
+    setTimeout(() => setCopied(false), 2000);
+  };
+  
+  const handleShare = () => {
+    telegram.hapticSelection();
+    const link = `https://t.me/MintIQBot?start=${user?.referral_code || 'ref'}`;
+    // FIXED: Use correct bonus amount
+    const message = `🎯 Join me on MintIQ!\n\nPredict crypto & earn real Bitcoin.\n\n✨ Get ${NEW_USER_BONUS} SATZ bonus when you join!\n\n${link}`;
+    telegram.shareUrl(link, message);
+  };
+  
+  const handleInviteContact = () => {
+    telegram.hapticSelection();
+    const link = `https://t.me/MintIQBot?start=${user?.referral_code || 'ref'}`;
+    telegram.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`🎯 Join me on MintIQ! Predict crypto & earn Bitcoin. Get ${NEW_USER_BONUS} SATZ bonus!`)}`);
+  };
+
+  // NEW: Add friend by username
+  const handleAddFriend = async () => {
+    if (!friendUsername.trim()) {
+      showToast('Please enter a username', 'error');
+      return;
+    }
+    
+    setIsAddingFriend(true);
+    try {
+      const response = await api.post('/api/miniapp/friends/add', {
+        username: friendUsername.replace('@', '').trim()
+      });
+      
+      if (response.success) {
+        showToast(`Added ${friendUsername} as friend!`, 'success');
+        telegram.hapticNotification('success');
+        setFriendUsername('');
+        setShowAddFriend(false);
+        await loadData(); // Refresh
+      } else {
+        showToast(response.error || 'Could not add friend', 'error');
+      }
+    } catch (e) {
+      showToast(e.message || 'Failed to add friend', 'error');
+    } finally {
+      setIsAddingFriend(false);
+    }
+  };
+
+  // ============================================
+  // COMPUTED
+  // ============================================
+
+  const referralCount = user?.referral_count || referrals.length || 0;
+  const totalEarned = stats?.totalEarned || 0;
+  const referralLink = `https://t.me/MintIQBot?start=${user?.referral_code || 'ref'}`;
+  
+  // FIXED: Get current commission tier
+  const commissionTier = getCommissionTier(referralCount);
+  const nextCommissionTier = COMMISSION_TIERS.find(t => t.minReferrals > referralCount);
+  
+  // Milestone progress
+  const currentMilestone = REFERRAL_MILESTONE_BONUSES.filter(t => referralCount >= t.count).pop();
+  const nextMilestone = REFERRAL_MILESTONE_BONUSES.find(t => referralCount < t.count);
+  const milestoneProgress = nextMilestone 
+    ? ((referralCount - (currentMilestone?.count || 0)) / (nextMilestone.count - (currentMilestone?.count || 0))) * 100
+    : 100;
+
+  // ============================================
+  // RENDER
+  // ============================================
+
+  return (
+    <div className="min-h-screen bg-dark-950 pb-24">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-blue-500/10 to-dark-950 px-4 pt-6 pb-8">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Users size={32} className="text-blue-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Invite & Earn</h1>
+          {/* FIXED: Show current tier rate, not hardcoded 7% */}
+          <p className="text-dark-400">
+            Earn <span className="font-bold" style={{ color: commissionTier.color }}>{commissionTier.rate}%</span> from your friends' earnings
+          </p>
+        </div>
+      </div>
+
+      <div className="px-4 -mt-4 space-y-4">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-dark-800 rounded-xl p-4 text-center border border-white/5">
+            <p className="text-3xl font-black text-white">{referralCount}</p>
+            <p className="text-xs text-dark-400">Friends Invited</p>
+          </div>
+          <div className="bg-dark-800 rounded-xl p-4 text-center border border-white/5">
+            <p className="text-3xl font-black text-mint-400">{formatCompact(totalEarned)}</p>
+            <p className="text-xs text-dark-400">SATZ Earned</p>
+          </div>
+        </div>
+
+        {/* FIXED: Commission Tiers Display */}
+        <div className="bg-gradient-to-br from-gold-500/10 to-orange-500/10 rounded-2xl p-4 border border-gold-500/20">
+          <h2 className="font-bold text-white mb-3 text-center">Commission Tiers</h2>
+          <p className="text-xs text-dark-400 text-center mb-4">More referrals = higher commission rate</p>
+          
+          <div className="grid grid-cols-4 gap-2">
+            {COMMISSION_TIERS.map((tier) => {
+              const isCurrentTier = tier.rate === commissionTier.rate;
+              return (
+                <div 
+                  key={tier.rate}
+                  className={`relative rounded-xl p-3 text-center ${isCurrentTier ? 'bg-dark-700 ring-2' : 'bg-dark-800/50'}`}
+                  style={isCurrentTier ? { ringColor: tier.color } : {}}
+                >
+                  {tier.rate === 7 && (
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-gold-500 text-dark-900 text-2xs px-1.5 py-0.5 rounded font-bold">
+                      BEST VALUE
+                    </span>
+                  )}
+                  <div 
+                    className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-2 text-white font-bold"
+                    style={{ backgroundColor: tier.color }}
+                  >
+                    {tier.rate}%
+                  </div>
+                  <p className="text-xs font-medium text-white">{tier.label}</p>
+                  <p className="text-2xs text-dark-500">
+                    {tier.minReferrals === 0 ? '1-10' : tier.minReferrals === 200 ? '200+' : `${tier.minReferrals}-${tier.maxReferrals}`} referrals
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+          
+          {nextCommissionTier && (
+            <p className="text-xs text-center text-dark-400 mt-3">
+              🎯 {nextCommissionTier.minReferrals - referralCount} more referrals to unlock {nextCommissionTier.rate}%!
+            </p>
+          )}
+        </div>
+
+        {/* How It Works - FIXED bonus amounts */}
+        <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl p-5 border border-blue-500/20">
+          <h2 className="font-bold text-white mb-4 flex items-center gap-2">
+            <Sparkles size={18} className="text-blue-400" />
+            How It Works
+          </h2>
+          
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                1
+              </div>
+              <div>
+                <p className="font-medium text-white text-sm">Share your link</p>
+                <p className="text-xs text-dark-400">Friends join using your unique code</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                2
+              </div>
+              <div>
+                <p className="font-medium text-white text-sm">They get {NEW_USER_BONUS} SATZ bonus</p>
+                <p className="text-xs text-dark-400">Welcome bonus for new users</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-mint-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                3
+              </div>
+              <div>
+                {/* FIXED: Show tiered rate */}
+                <p className="font-medium text-white text-sm">You earn {commissionTier.rate}%+ forever</p>
+                <p className="text-xs text-dark-400">Earn more as you invite more friends!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Share Actions */}
+        <div className="space-y-3">
+          {/* Copy Link */}
+          <div className="bg-dark-800 rounded-xl p-4 border border-white/5">
+            <p className="text-xs text-dark-400 mb-2">Your referral link</p>
+            <div className="flex gap-2">
+              <div className="flex-1 bg-dark-700 rounded-lg px-3 py-2.5 text-sm text-dark-300 truncate">
+                {referralLink}
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={handleCopyLink}
+                className={`px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors ${
+                  copied 
+                    ? 'bg-green-500 text-white' 
+                    : 'bg-mint-500 text-white'
+                }`}
+              >
+                {copied ? <Check size={18} /> : <Copy size={18} />}
+                {copied ? 'Copied' : 'Copy'}
+              </motion.button>
+            </div>
+          </div>
+          
+          {/* Share Buttons */}
+          <div className="grid grid-cols-3 gap-3">
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={handleShare}
+              className="bg-blue-500 rounded-xl p-4 text-white font-medium flex flex-col items-center justify-center gap-2"
+            >
+              <Share2 size={20} />
+              <span className="text-xs">Share</span>
+            </motion.button>
+            
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={handleInviteContact}
+              className="bg-dark-800 rounded-xl p-4 text-white font-medium flex flex-col items-center justify-center gap-2 border border-white/5"
+            >
+              <UserPlus size={20} />
+              <span className="text-xs">Invite</span>
+            </motion.button>
+
+            {/* NEW: Add Friend Button */}
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowAddFriend(true)}
+              className="bg-purple-500/20 rounded-xl p-4 text-purple-400 font-medium flex flex-col items-center justify-center gap-2 border border-purple-500/30"
+            >
+              <Search size={20} />
+              <span className="text-xs">Add Friend</span>
+            </motion.button>
+          </div>
+        </div>
+
+        {/* Milestone Progress */}
+        {nextMilestone && (
+          <div className="bg-dark-800 rounded-xl p-4 border border-white/5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Crown size={16} className="text-gold-400" />
+                <span className="font-medium text-white text-sm">Next Milestone</span>
+              </div>
+              <span className="text-gold-400 font-bold">+{formatSatz(nextMilestone.bonus)} SATZ</span>
+            </div>
+            
+            <div className="h-2 bg-dark-700 rounded-full overflow-hidden mb-2">
+              <motion.div
+                className="h-full bg-gradient-to-r from-gold-500 to-orange-500 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${milestoneProgress}%` }}
+                transition={{ duration: 0.5 }}
+              />
+            </div>
+            
+            <div className="flex justify-between text-xs text-dark-400">
+              <span>{referralCount} friends</span>
+              <span>{nextMilestone.count} friends</span>
+            </div>
+          </div>
+        )}
+
+        {/* Referral List */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-white">Your Referrals</h2>
+            <span className="text-xs text-dark-400">{referralCount} total</span>
+          </div>
+          
+          {referrals.length === 0 ? (
+            <div className="text-center py-8 bg-dark-800 rounded-xl">
+              <Users size={40} className="mx-auto mb-3 text-dark-600" />
+              <p className="text-dark-400 font-medium">No referrals yet</p>
+              <p className="text-dark-500 text-sm mt-1">Share your link to start earning!</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {referrals.slice(0, 10).map((ref, index) => (
+                <div 
+                  key={ref.id || index}
+                  className="bg-dark-800 rounded-xl p-3 flex items-center gap-3 border border-white/5"
+                >
+                  <div className="w-10 h-10 bg-dark-700 rounded-full flex items-center justify-center text-lg">
+                    {ref.first_name?.[0] || ref.username?.[0] || '👤'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-white text-sm truncate">
+                      {ref.first_name || ref.username || 'Anonymous'}
+                    </p>
+                    <p className="text-xs text-dark-500">
+                      Joined {new Date(ref.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-mint-400 font-bold text-sm">
+                      +{formatSatz(ref.commission_earned || 0)}
+                    </p>
+                    <p className="text-xs text-dark-500">earned</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Milestone Rewards */}
+        <div className="bg-dark-800/50 rounded-xl p-4 border border-white/5">
+          <h3 className="font-semibold text-white text-sm mb-3 flex items-center gap-2">
+            <Gift size={16} className="text-gold-400" />
+            Milestone Bonuses
+          </h3>
+          
+          <div className="space-y-2">
+            {REFERRAL_MILESTONE_BONUSES.map((tier) => {
+              const isAchieved = referralCount >= tier.count;
+              return (
+                <div 
+                  key={tier.count}
+                  className={`flex items-center justify-between py-2 ${
+                    isAchieved ? 'opacity-60' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                      isAchieved 
+                        ? 'bg-green-500/20 text-green-400' 
+                        : 'bg-dark-700 text-dark-400'
+                    }`}>
+                      {isAchieved ? '✓' : tier.count}
+                    </div>
+                    <span className={`text-sm ${isAchieved ? 'text-dark-400' : 'text-white'}`}>
+                      {tier.label}
+                    </span>
+                  </div>
+                  <span className={`font-bold ${isAchieved ? 'text-dark-500' : 'text-gold-400'}`}>
+                    +{formatSatz(tier.bonus)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Add Friend Modal */}
+      <AnimatePresence>
+        {showAddFriend && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowAddFriend(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-dark-800 rounded-2xl p-6 w-full max-w-sm"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">Add Friend</h3>
+                <button onClick={() => setShowAddFriend(false)} className="text-dark-400">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <p className="text-sm text-dark-400 mb-4">
+                Enter their Telegram username to add as friend
+              </p>
+              
+              <div className="relative mb-4">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400">@</span>
+                <input
+                  type="text"
+                  value={friendUsername}
+                  onChange={(e) => setFriendUsername(e.target.value)}
+                  placeholder="username"
+                  className="w-full bg-dark-700 border border-white/10 rounded-xl py-3 pl-8 pr-4 text-white placeholder-dark-500 focus:outline-none focus:border-mint-500"
+                />
+              </div>
+              
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={handleAddFriend}
+                disabled={isAddingFriend}
+                className="w-full bg-mint-500 text-white font-bold py-3 rounded-xl disabled:opacity-50"
+              >
+                {isAddingFriend ? 'Adding...' : 'Add Friend'}
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

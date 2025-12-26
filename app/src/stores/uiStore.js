@@ -1,3 +1,11 @@
+/**
+ * MintIQ UI Store - FIXED
+ * 
+ * Key Fixes:
+ * - Celebration no longer auto-dismisses (component handles it)
+ * - Added clearCelebration for manual dismissal
+ */
+
 import { create } from 'zustand';
 
 export const useUIStore = create((set, get) => ({
@@ -98,16 +106,12 @@ export const useUIStore = create((set, get) => ({
     set({ isTabBarVisible: visible });
   },
 
-  // Celebration animations
+  // Celebration animations - FIXED: No auto-dismiss, component handles it
   celebration: null,
 
   showCelebration: (type, data = {}) => {
     set({ celebration: { type, data } });
-    
-    // Auto clear after animation
-    setTimeout(() => {
-      set({ celebration: null });
-    }, 3000);
+    // Don't auto-dismiss - the Celebration component has its own countdown and dismiss logic
   },
 
   clearCelebration: () => {

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="coinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="100%" style="stop-color:#FFA500"/>
+    </linearGradient>
+    <linearGradient id="mintGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0066FF"/>
+      <stop offset="100%" style="stop-color:#00D4FF"/>
+    </linearGradient>
+  </defs>
+  <!-- Coin base -->
+  <circle cx="50" cy="50" r="45" fill="url(#coinGrad)"/>
+  <!-- Inner ring -->
+  <circle cx="50" cy="50" r="38" fill="none" stroke="#B8860B" stroke-width="2"/>
+  <!-- M letter -->
+  <path d="M30 70 L30 35 L50 55 L70 35 L70 70" 
+        fill="none" 
+        stroke="url(#mintGrad)" 
+        stroke-width="8" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+</svg>

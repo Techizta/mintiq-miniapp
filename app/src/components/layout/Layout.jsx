@@ -1,3 +1,11 @@
+/**
+ * MintIQ Layout - FIXED
+ * 
+ * Key Fixes:
+ * - Pass onClose callback to Celebration component
+ * - Updated leaderboard title to "Ranks"
+ */
+
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from './BottomNav';
@@ -9,7 +17,7 @@ import { useUIStore } from '../../stores/uiStore';
 
 export default function Layout() {
   const location = useLocation();
-  const { isTabBarVisible, toasts, modal, celebration } = useUIStore();
+  const { isTabBarVisible, toasts, modal, celebration, clearCelebration } = useUIStore();
 
   const showHeader = !['/', '/more'].includes(location.pathname);
   
@@ -24,12 +32,17 @@ export default function Layout() {
       '/friends': 'Friends',
       '/challenges': 'Challenges',
       '/groups': 'Groups',
-      '/leaderboard': 'Leaderboard',
+      '/leaderboard': 'Ranks',  // FIXED: Changed from "Leaderboard"
+      '/ranks': 'Ranks',
       '/vault': 'BTC Vault',
       '/shop': 'Shop',
       '/boosters': 'Boosters',
       '/stats': 'My Stats',
       '/settings': 'Settings',
+      '/settings/notifications': 'Settings',
+      '/settings/security': 'Settings',
+      '/settings/language': 'Settings',
+      '/support': 'Settings',
     };
     if (location.pathname.startsWith('/predict/')) return 'Quest';
     if (location.pathname.startsWith('/groups/')) return 'Group';
@@ -65,7 +78,13 @@ export default function Layout() {
         {modal.isOpen && <Modal type={modal.type} props={modal.props} />}
       </AnimatePresence>
       <AnimatePresence>
-        {celebration && <Celebration type={celebration.type} data={celebration.data} />}
+        {celebration && (
+          <Celebration 
+            type={celebration.type} 
+            data={celebration.data} 
+            onClose={clearCelebration}  // FIXED: Added onClose callback
+          />
+        )}
       </AnimatePresence>
     </div>
   );

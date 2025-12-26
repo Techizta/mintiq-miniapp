@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 
 // Layout
@@ -37,9 +37,14 @@ import { useUserStore } from './stores/userStore';
 import SplashScreen from './components/shared/SplashScreen';
 import ErrorBoundary from './components/shared/ErrorBoundary';
 
+// Minimum splash screen display time (ms)
+const MIN_SPLASH_TIME = 1500;
+
 function App() {
   const { isInitialized, isAuthenticated, initialize } = useAuthStore();
   const { fetchUser } = useUserStore();
+  const [showSplash, setShowSplash] = useState(true);
+  const [initStartTime] = useState(Date.now());
 
   useEffect(() => {
     // Initialize auth on mount
@@ -53,8 +58,22 @@ function App() {
     }
   }, [isAuthenticated, fetchUser]);
 
-  // Show splash screen while initializing
-  if (!isInitialized) {
+  useEffect(() => {
+    // Ensure minimum splash display time for smooth UX
+    if (isInitialized) {
+      const elapsed = Date.now() - initStartTime;
+      const remaining = Math.max(0, MIN_SPLASH_TIME - elapsed);
+      
+      const timer = setTimeout(() => {
+        setShowSplash(false);
+      }, remaining);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isInitialized, initStartTime]);
+
+  // Show splash screen while initializing or minimum time not elapsed
+  if (showSplash || !isInitialized) {
     return <SplashScreen />;
   }
 
@@ -81,11 +100,18 @@ function App() {
             <Route path="groups" element={<GroupsPage />} />
             <Route path="groups/:groupId" element={<GroupDetailPage />} />
             <Route path="leaderboard" element={<LeaderboardPage />} />
+            <Route path="ranks" element={<LeaderboardPage />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="shop" element={<ShopPage />} />
             <Route path="boosters" element={<BoostersPage />} />
             <Route path="stats" element={<StatsPage />} />
+            
+            {/* Settings routes - consolidated into one page */}
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="settings/notifications" element={<SettingsPage />} />
+            <Route path="settings/security" element={<SettingsPage />} />
+            <Route path="settings/language" element={<SettingsPage />} />
+            <Route path="support" element={<SettingsPage />} />
           </Route>
           
           {/* Fallback */}

@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Zap, 
   Clock, 
   TrendingUp,
   Star,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import { useUserStore } from '../stores/userStore';
 import { useUIStore } from '../stores/uiStore';
+import api from '../services/api';
 import telegram from '../services/telegram';
 import { formatSatz } from '../utils/helpers';
 
@@ -68,14 +70,69 @@ const COLOR_CLASSES = {
 };
 
 export default function BoostersPage() {
-  const { user, deductBalance } = useUserStore();
+  const { user, refreshUser } = useUserStore();
   const { showToast, openModal } = useUIStore();
   const [activeBooster, setActiveBooster] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActivating, setIsActivating] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState('');
 
   const balance = user?.satz_balance || 0;
 
-  // Mock active booster for demo
-  const currentBooster = activeBooster || null;
+  // Fetch active booster on mount
+  useEffect(() => {
+    fetchActiveBooster();
+  }, []);
+
+  // Update countdown timer
+  useEffect(() => {
+    if (!activeBooster) return;
+
+    const updateTimer = () => {
+      const now = new Date();
+      const expires = new Date(activeBooster.expiresAt);
+      const diff = expires - now;
+
+      if (diff <= 0) {
+        setActiveBooster(null);
+        setTimeRemaining('');
+        return;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (hours > 24) {
+        const days = Math.floor(hours / 24);
+        setTimeRemaining(`${days}d ${hours % 24}h left`);
+      } else if (hours > 0) {
+        setTimeRemaining(`${hours}h ${minutes}m left`);
+      } else {
+        setTimeRemaining(`${minutes}m left`);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [activeBooster]);
+
+  const fetchActiveBooster = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.get('/api/miniapp/boosters/active');
+      if (response.active && response.booster) {
+        setActiveBooster(response.booster);
+      } else {
+        setActiveBooster(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch active booster:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleActivate = (booster) => {
     if (balance < booster.price) {
@@ -83,7 +140,7 @@ export default function BoostersPage() {
       return;
     }
 
-    if (currentBooster) {
+    if (activeBooster) {
       showToast('You already have an active booster', 'warning');
       return;
     }
@@ -99,22 +156,43 @@ export default function BoostersPage() {
         </div>
       ),
       onConfirm: async () => {
-        telegram.hapticNotification('success');
-        deductBalance(booster.price);
-        setActiveBooster({
-          ...booster,
-          activatedAt: Date.now(),
-          expiresAt: Date.now() + booster.durationHours * 60 * 60 * 1000,
-        });
-        showToast(`${booster.name} activated! 🚀`, 'success');
+        setIsActivating(true);
+        telegram.hapticImpact('medium');
+        
+        try {
+          const response = await api.post('/api/miniapp/boosters/activate', {
+            boosterId: booster.id
+          });
+          
+          if (response.success) {
+            telegram.hapticNotification('success');
+            setActiveBooster(response.booster);
+            showToast(`${booster.name} activated! 🚀`, 'success');
+            // Refresh user to get updated balance
+            refreshUser();
+          }
+        } catch (error) {
+          telegram.hapticNotification('error');
+          showToast(error.message || 'Failed to activate booster', 'error');
+        } finally {
+          setIsActivating(false);
+        }
       },
     });
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-mint-400" />
+      </div>
+    );
+  }
+
   return (
     <div className="pb-4">
       {/* Active booster banner */}
-      {currentBooster && (
+      {activeBooster && (
         <div className="px-4 pt-4 mb-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -122,18 +200,20 @@ export default function BoostersPage() {
             className="card bg-gradient-to-r from-gold-600/30 to-gold-800/30 border-gold-500/30 p-4"
           >
             <div className="flex items-center gap-3">
-              <div className="text-4xl">{currentBooster.icon}</div>
+              <div className="text-4xl">
+                {BOOSTERS.find(b => b.id === activeBooster.id)?.icon || '⚡'}
+              </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-white">{currentBooster.name}</h3>
+                  <h3 className="font-bold text-white">{activeBooster.name}</h3>
                   <span className="badge-success">Active</span>
                 </div>
                 <p className="text-sm text-dark-400">
-                  {currentBooster.multiplier}x earnings • Expires in {currentBooster.duration}
+                  {activeBooster.multiplier}x earnings • {timeRemaining || activeBooster.duration}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-gold-400">{currentBooster.multiplier}x</p>
+                <p className="text-2xl font-bold text-gold-400">{activeBooster.multiplier}x</p>
               </div>
             </div>
           </motion.div>
@@ -195,14 +275,20 @@ export default function BoostersPage() {
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleActivate(booster)}
-                  disabled={balance < booster.price || currentBooster}
+                  disabled={balance < booster.price || activeBooster || isActivating}
                   className={`px-4 py-1.5 rounded-lg text-sm font-medium ${
-                    balance >= booster.price && !currentBooster
+                    balance >= booster.price && !activeBooster && !isActivating
                       ? 'bg-white text-dark-900'
                       : 'bg-white/20 text-white/50'
                   }`}
                 >
-                  {currentBooster ? 'Active' : 'Activate'}
+                  {isActivating ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : activeBooster ? (
+                    'Active'
+                  ) : (
+                    'Activate'
+                  )}
                 </motion.button>
               </div>
             </div>
