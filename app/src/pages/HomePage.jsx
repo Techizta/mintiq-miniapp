@@ -52,7 +52,6 @@ import {
   formatSatzWithUsd,
   getWithdrawalProgress,
   formatToMilestone,
-  getStreakMultiplier,
   setBtcPrice
 } from '../utils/helpers';
 
@@ -171,7 +170,6 @@ export default function HomePage() {
   const balanceUsd = satzUsdValue(balance, btcPrice);
   const withdrawalProgress = getWithdrawalProgress(balance);
   const currentStreak = Number(user?.current_streak) || 0;
-  const streakMultiplier = getStreakMultiplier(currentStreak);
   const isFirstPrediction = !user?.first_prediction_bonus_claimed && (user?.predictions_made || 0) === 0;
 
   // ============================================
@@ -223,12 +221,6 @@ export default function HomePage() {
               <Flame size={14} className="text-orange-500" />
               <span className="text-sm font-semibold text-orange-400">{currentStreak} day streak</span>
             </div>
-            {streakMultiplier > 1 && (
-              <div className="flex items-center gap-1 bg-mint-500/10 border border-mint-500/20 rounded-full px-2 py-1">
-                <Zap size={12} className="text-mint-400" />
-                <span className="text-xs font-semibold text-mint-400">{streakMultiplier}x bonus</span>
-              </div>
-            )}
           </div>
         )}
         
