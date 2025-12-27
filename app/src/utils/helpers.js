@@ -206,16 +206,16 @@ export function calculatePotentialWin(betAmount, myPool, otherPool, fee = 0.1) {
 }
 
 // ============================================
-// TIER SYSTEM
+// TIER SYSTEM - Updated: Bonuses instead of multipliers
 // ============================================
 
 export const TIERS = {
-  newcomer: { name: 'Newcomer', color: '#9CA3AF', emoji: '🌱', points: 0, multiplier: 1.0 },
-  stacker: { name: 'Stacker', color: '#22C55E', emoji: '📦', points: 1000, multiplier: 1.1 },
-  hodler: { name: 'Hodler', color: '#3B82F6', emoji: '💎', points: 5000, multiplier: 1.2 },
-  whale: { name: 'Whale', color: '#8B5CF6', emoji: '🐋', points: 15000, multiplier: 1.3 },
-  satoshi: { name: 'Satoshi', color: '#F59E0B', emoji: '⚡', points: 50000, multiplier: 1.5 },
-  nakamoto: { name: 'Nakamoto', color: '#EF4444', emoji: '👑', points: 150000, multiplier: 2.0 },
+  newcomer: { name: 'Newcomer', color: '#9CA3AF', emoji: '🌱', threshold: 0, levelBonus: 0, dailyBonus: 0 },
+  stacker: { name: 'Stacker', color: '#22C55E', emoji: '📦', threshold: 1000, levelBonus: 250, dailyBonus: 5 },
+  hodler: { name: 'Hodler', color: '#3B82F6', emoji: '💎', threshold: 5000, levelBonus: 500, dailyBonus: 10 },
+  whale: { name: 'Whale', color: '#8B5CF6', emoji: '🐋', threshold: 15000, levelBonus: 1500, dailyBonus: 20 },
+  satoshi: { name: 'Satoshi', color: '#F59E0B', emoji: '⚡', threshold: 50000, levelBonus: 5000, dailyBonus: 35 },
+  nakamoto: { name: 'Nakamoto', color: '#EF4444', emoji: '👑', threshold: 150000, levelBonus: 15000, dailyBonus: 50 },
 };
 
 export function getTierInfo(tier) {
@@ -224,17 +224,29 @@ export function getTierInfo(tier) {
   return TIERS[t] || TIERS.newcomer;
 }
 
-export function getTierProgress(tierPoints) {
-  const points = Number(tierPoints) || 0;
+export function getTierProgress(totalEarned) {
+  const earned = Number(totalEarned) || 0;
   const tiers = Object.values(TIERS);
   for (let i = tiers.length - 1; i >= 0; i--) {
-    if (points >= tiers[i].points) {
+    if (earned >= tiers[i].threshold) {
       const next = tiers[i + 1];
       if (!next) return { current: tiers[i], next: null, progress: 100 };
-      return { current: tiers[i], next, progress: Math.min(100, ((points - tiers[i].points) / (next.points - tiers[i].points)) * 100) };
+      const progressPct = Math.min(100, ((earned - tiers[i].threshold) / (next.threshold - tiers[i].threshold)) * 100);
+      return { current: tiers[i], next, progress: progressPct };
     }
   }
   return { current: TIERS.newcomer, next: TIERS.stacker, progress: 0 };
+}
+
+export function getTierFromEarnings(totalEarned) {
+  const earned = Number(totalEarned) || 0;
+  const tierKeys = ['nakamoto', 'satoshi', 'whale', 'hodler', 'stacker', 'newcomer'];
+  for (const key of tierKeys) {
+    if (earned >= TIERS[key].threshold) {
+      return key;
+    }
+  }
+  return 'newcomer';
 }
 
 // ============================================

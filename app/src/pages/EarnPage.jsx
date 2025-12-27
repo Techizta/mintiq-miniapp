@@ -1,6 +1,9 @@
 /**
- * MintIQ EarnPage - Simplified Stable Version
- * Daily streak, spin wheel, tasks
+ * MintIQ EarnPage - FIXED
+ * 
+ * FIXES:
+ * 1. Wheel segments now match backend rewards exactly
+ * 2. Handles any reward value gracefully (finds closest segment)
  */
 
 import { useEffect, useState } from 'react';
@@ -25,15 +28,18 @@ import { formatSatz } from '../utils/helpers';
 
 const STREAK_REWARDS = { 1: 10, 2: 15, 3: 25, 4: 35, 5: 50, 6: 75, 7: 150 };
 
+// FIXED: Wheel segments now match backend rewards exactly
+// Backend: [1, 1, 2, 2, 2, 3, 3, 5, 5, 7, 10, 10, 15, 20]
+// Wheel shows unique values with colors
 const WHEEL_SEGMENTS = [
-  { value: 1, color: '#06B6D4' },
-  { value: 5, color: '#8B5CF6' },
-  { value: 2, color: '#EC4899' },
-  { value: 10, color: '#F59E0B' },
-  { value: 3, color: '#3B82F6' },
-  { value: 25, color: '#10B981' },
-  { value: 7, color: '#EF4444' },
-  { value: 50, color: '#FFD700' },
+  { value: 1, color: '#06B6D4' },   // Cyan - most common
+  { value: 2, color: '#EC4899' },   // Pink - common
+  { value: 3, color: '#3B82F6' },   // Blue - common
+  { value: 5, color: '#8B5CF6' },   // Purple - medium
+  { value: 7, color: '#EF4444' },   // Red - medium
+  { value: 10, color: '#F59E0B' },  // Orange - rare
+  { value: 15, color: '#10B981' },  // Green - rare
+  { value: 20, color: '#FFD700' },  // Gold - jackpot
 ];
 
 // Simple Spin Wheel Component
@@ -44,7 +50,21 @@ function SpinWheel({ onSpin, isSpinning, result, canSpin }) {
 
   useEffect(() => {
     if (result && isSpinning) {
-      const segmentIndex = WHEEL_SEGMENTS.findIndex(s => s.value === result.amount);
+      // FIXED: Find exact segment or closest one
+      let segmentIndex = WHEEL_SEGMENTS.findIndex(s => s.value === result.amount);
+      
+      // If not found, find the closest value
+      if (segmentIndex < 0) {
+        let closestDiff = Infinity;
+        WHEEL_SEGMENTS.forEach((s, i) => {
+          const diff = Math.abs(s.value - result.amount);
+          if (diff < closestDiff) {
+            closestDiff = diff;
+            segmentIndex = i;
+          }
+        });
+      }
+      
       const targetIndex = segmentIndex >= 0 ? segmentIndex : 0;
       const targetRotation = 360 * 5 + (360 - (targetIndex * segmentAngle + segmentAngle / 2));
       setRotation(targetRotation);
@@ -207,10 +227,11 @@ export default function EarnPage() {
     
     try {
       const response = await api.post('/api/miniapp/earn/spin');
-      const reward = response?.reward || response?.amount || WHEEL_SEGMENTS[Math.floor(Math.random() * WHEEL_SEGMENTS.length)].value;
+      // FIXED: Use exact reward from backend
+      const reward = response?.reward || response?.amount || 1;
       setSpinResult({ amount: reward });
       setTimeout(() => {
-        setCanSpin(false);
+        setCanSpin(response?.canSpinAgain === true ? true : false);
         setIsSpinning(false);
         fetchUser(true);
         telegram.hapticNotification('success');
@@ -249,7 +270,7 @@ export default function EarnPage() {
               Daily Spin
             </h2>
             <p className="text-sm text-dark-400">
-              {canSpin ? 'Spin to win up to 50 SATZ!' : 'Come back tomorrow!'}
+              {canSpin ? 'Spin to win up to 20 SATZ!' : 'Come back tomorrow!'}
             </p>
           </div>
           <SpinWheel 
@@ -322,7 +343,7 @@ export default function EarnPage() {
           <Link to="/boosters" className="bg-dark-800 rounded-xl p-4 border border-white/5">
             <Zap size={20} className="text-purple-400 mb-2" />
             <h3 className="font-semibold text-white text-sm">Boosters</h3>
-            <p className="text-xs text-dark-400">Multiply rewards</p>
+            <p className="text-xs text-dark-400">Multiply winnings</p>
           </Link>
         </div>
 

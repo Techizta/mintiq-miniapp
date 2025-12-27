@@ -261,7 +261,7 @@ export default function WalletPage() {
           </div>
           <div className="bg-dark-800 rounded-xl p-3 text-center">
             <p className="text-lg font-bold text-white">{formatCompact(user?.total_won || 0)}</p>
-            <p className="text-2xs text-dark-400">Prediction Wins</p>
+            <p className="text-2xs text-dark-400">SATZ Won</p>
           </div>
           <div className="bg-dark-800 rounded-xl p-3 text-center">
             <p className="text-lg font-bold text-white">{user?.referral_count || 0}</p>

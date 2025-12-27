@@ -502,7 +502,7 @@ export default function HomePage() {
           </div>
           <div className="bg-dark-800/50 rounded-xl p-3 text-center">
             <p className="text-lg font-bold text-white">{formatCompact(user?.total_won || 0)}</p>
-            <p className="text-2xs text-dark-400">Total Won</p>
+            <p className="text-2xs text-dark-400">SATZ Won</p>
           </div>
         </motion.div>
 
