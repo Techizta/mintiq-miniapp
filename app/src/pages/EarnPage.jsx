@@ -1,9 +1,5 @@
 /**
- * MintIQ EarnPage - FIXED
- * 
- * FIXES:
- * 1. Wheel segments now match backend rewards exactly
- * 2. Handles any reward value gracefully (finds closest segment)
+ * MintIQ EarnPage - FIXED + ENGAGEMENT
  */
 
 import { useEffect, useState } from 'react';
@@ -26,23 +22,22 @@ import api from '../services/api';
 import telegram from '../services/telegram';
 import { formatSatz } from '../utils/helpers';
 
+// Engagement: Channel Task
+import ChannelTask from '../components/features/ChannelTask';
+
 const STREAK_REWARDS = { 1: 10, 2: 15, 3: 25, 4: 35, 5: 50, 6: 75, 7: 150 };
 
-// FIXED: Wheel segments now match backend rewards exactly
-// Backend: [1, 1, 2, 2, 2, 3, 3, 5, 5, 7, 10, 10, 15, 20]
-// Wheel shows unique values with colors
 const WHEEL_SEGMENTS = [
-  { value: 1, color: '#06B6D4' },   // Cyan - most common
-  { value: 2, color: '#EC4899' },   // Pink - common
-  { value: 3, color: '#3B82F6' },   // Blue - common
-  { value: 5, color: '#8B5CF6' },   // Purple - medium
-  { value: 7, color: '#EF4444' },   // Red - medium
-  { value: 10, color: '#F59E0B' },  // Orange - rare
-  { value: 15, color: '#10B981' },  // Green - rare
-  { value: 20, color: '#FFD700' },  // Gold - jackpot
+  { value: 1, color: '#06B6D4' },
+  { value: 2, color: '#EC4899' },
+  { value: 3, color: '#3B82F6' },
+  { value: 5, color: '#8B5CF6' },
+  { value: 7, color: '#EF4444' },
+  { value: 10, color: '#F59E0B' },
+  { value: 15, color: '#10B981' },
+  { value: 20, color: '#FFD700' },
 ];
 
-// Simple Spin Wheel Component
 function SpinWheel({ onSpin, isSpinning, result, canSpin }) {
   const [rotation, setRotation] = useState(0);
   const [showResult, setShowResult] = useState(false);
@@ -50,10 +45,7 @@ function SpinWheel({ onSpin, isSpinning, result, canSpin }) {
 
   useEffect(() => {
     if (result && isSpinning) {
-      // FIXED: Find exact segment or closest one
       let segmentIndex = WHEEL_SEGMENTS.findIndex(s => s.value === result.amount);
-      
-      // If not found, find the closest value
       if (segmentIndex < 0) {
         let closestDiff = Infinity;
         WHEEL_SEGMENTS.forEach((s, i) => {
@@ -64,7 +56,6 @@ function SpinWheel({ onSpin, isSpinning, result, canSpin }) {
           }
         });
       }
-      
       const targetIndex = segmentIndex >= 0 ? segmentIndex : 0;
       const targetRotation = 360 * 5 + (360 - (targetIndex * segmentAngle + segmentAngle / 2));
       setRotation(targetRotation);
@@ -78,14 +69,12 @@ function SpinWheel({ onSpin, isSpinning, result, canSpin }) {
     onSpin();
   };
 
-  // Build conic-gradient string
   const gradientStops = WHEEL_SEGMENTS.map((seg, i) => 
     `${seg.color} ${i * segmentAngle}deg ${(i + 1) * segmentAngle}deg`
   ).join(', ');
 
   return (
     <div className="flex flex-col items-center">
-      {/* Pointer */}
       <div className="relative z-10 mb-[-10px]">
         <div 
           className="w-0 h-0"
@@ -97,22 +86,16 @@ function SpinWheel({ onSpin, isSpinning, result, canSpin }) {
         />
       </div>
 
-      {/* Wheel Container */}
       <div className="relative w-56 h-56">
-        {/* Outer glow */}
         <div className="absolute inset-[-4px] rounded-full bg-yellow-500/20 blur-md" />
-        
-        {/* Outer border */}
         <div className="absolute inset-0 rounded-full border-4 border-yellow-500/50" />
         
-        {/* Spinning wheel */}
         <motion.div
           className="w-full h-full rounded-full relative overflow-hidden"
           animate={{ rotate: rotation }}
           transition={{ duration: 3.5, ease: [0.2, 0.8, 0.2, 1] }}
           style={{ background: `conic-gradient(${gradientStops})` }}
         >
-          {/* Segment labels */}
           {WHEEL_SEGMENTS.map((segment, i) => {
             const angle = i * segmentAngle + segmentAngle / 2;
             const rad = (angle - 90) * (Math.PI / 180);
@@ -134,7 +117,6 @@ function SpinWheel({ onSpin, isSpinning, result, canSpin }) {
           })}
         </motion.div>
 
-        {/* Center button */}
         <button
           onClick={handleSpin}
           disabled={!canSpin || isSpinning}
@@ -156,7 +138,6 @@ function SpinWheel({ onSpin, isSpinning, result, canSpin }) {
         </button>
       </div>
 
-      {/* Result */}
       <AnimatePresence>
         {showResult && result && (
           <motion.div
@@ -227,7 +208,6 @@ export default function EarnPage() {
     
     try {
       const response = await api.post('/api/miniapp/earn/spin');
-      // FIXED: Use exact reward from backend
       const reward = response?.reward || response?.amount || 1;
       setSpinResult({ amount: reward });
       setTimeout(() => {
@@ -255,7 +235,6 @@ export default function EarnPage() {
 
   return (
     <div className="min-h-screen bg-dark-950 pb-24">
-      {/* Header */}
       <div className="bg-dark-900 border-b border-white/5 px-4 py-4">
         <h1 className="text-xl font-bold text-white">Earn SATZ</h1>
         <p className="text-sm text-dark-400">Spin, claim & complete tasks</p>
@@ -332,6 +311,9 @@ export default function EarnPage() {
             ))}
           </div>
         </div>
+
+        {/* Engagement: Channel Task */}
+        <ChannelTask onComplete={() => fetchUser(true)} />
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3">

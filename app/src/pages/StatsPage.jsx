@@ -1,11 +1,5 @@
 /**
- * MintIQ StatsPage - UPDATED
- * 
- * CHANGES:
- * 1. Removed misleading multiplier display
- * 2. Shows one-time level-up bonus for each tier
- * 3. Shows daily bonus for each tier
- * 4. Clear progression with bonus rewards
+ * MintIQ StatsPage - UPDATED + ENGAGEMENT
  */
 
 import { motion } from 'framer-motion';
@@ -13,7 +7,9 @@ import { TrendingUp, Trophy, Target, Flame, Award, BarChart3, Crown, Gift, Spark
 import { useUserStore } from '../stores/userStore';
 import { formatSatz, getTierInfo } from '../utils/helpers';
 
-// Tier configuration with bonuses
+// Engagement: Badges
+import BadgesSection from '../components/features/BadgesSection';
+
 const TIER_CONFIG = [
   { name: 'Newcomer', key: 'newcomer', threshold: 0, color: '#6b7280', levelBonus: 0, dailyBonus: 0 },
   { name: 'Stacker', key: 'stacker', threshold: 1000, color: '#22c55e', levelBonus: 250, dailyBonus: 5 },
@@ -23,22 +19,18 @@ const TIER_CONFIG = [
   { name: 'Nakamoto', key: 'nakamoto', threshold: 150000, color: '#ef4444', levelBonus: 15000, dailyBonus: 50 },
 ];
 
-// Calculate tier from total_earned
 function calculateTier(totalEarned) {
   const earned = parseInt(totalEarned) || 0;
   let currentTier = TIER_CONFIG[0];
-  
   for (let i = TIER_CONFIG.length - 1; i >= 0; i--) {
     if (earned >= TIER_CONFIG[i].threshold) {
       currentTier = TIER_CONFIG[i];
       break;
     }
   }
-  
   return currentTier;
 }
 
-// Get next tier info
 function getNextTier(currentTierKey) {
   const currentIndex = TIER_CONFIG.findIndex(t => t.key === currentTierKey);
   if (currentIndex < TIER_CONFIG.length - 1) {
@@ -47,7 +39,6 @@ function getNextTier(currentTierKey) {
   return null;
 }
 
-// Get tier emoji
 function getTierEmoji(key) {
   const emojis = {
     newcomer: '🌱',
@@ -63,12 +54,10 @@ function getTierEmoji(key) {
 export default function StatsPage() {
   const { user } = useUserStore();
   
-  // Calculate tier from total_earned
   const totalEarned = parseInt(user?.total_earned) || 0;
   const currentTier = calculateTier(totalEarned);
   const nextTier = getNextTier(currentTier.key);
   
-  // Calculate progress to next tier
   let progress = 100;
   let progressDisplay = '';
   let satzToNextTier = 0;
@@ -132,7 +121,6 @@ export default function StatsPage() {
             )}
           </div>
           
-          {/* Progress to Next Tier */}
           {nextTier ? (
             <div className="bg-dark-700/50 rounded-lg p-3">
               <div className="flex items-center justify-between text-sm mb-2">
@@ -172,6 +160,11 @@ export default function StatsPage() {
         </motion.div>
       </div>
 
+      {/* Engagement: Badges Section */}
+      <div className="px-4 mb-4">
+        <BadgesSection />
+      </div>
+
       {/* Tier Rewards Overview */}
       <div className="px-4 mb-4">
         <h3 className="text-sm font-medium text-dark-400 mb-3 flex items-center gap-2">
@@ -179,14 +172,12 @@ export default function StatsPage() {
           Tier Rewards
         </h3>
         <div className="bg-dark-800 rounded-xl border border-white/5 overflow-hidden">
-          {/* Header */}
           <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-dark-700/50 text-xs text-dark-400">
             <div className="col-span-5">Tier</div>
             <div className="col-span-4 text-center">Level-Up Bonus</div>
             <div className="col-span-3 text-right">Daily</div>
           </div>
           
-          {/* Tiers */}
           {TIER_CONFIG.map((tier, index) => {
             const isCurrentTier = tier.key === currentTier.key;
             const isAchieved = totalEarned >= tier.threshold;
@@ -199,7 +190,6 @@ export default function StatsPage() {
                   isCurrentTier ? 'bg-dark-700/30' : ''
                 } ${!isAchieved && !isNextTier ? 'opacity-50' : ''}`}
               >
-                {/* Tier Name */}
                 <div className="col-span-5 flex items-center gap-2">
                   <span className="text-lg">{getTierEmoji(tier.key)}</span>
                   <div>
@@ -217,7 +207,6 @@ export default function StatsPage() {
                   </div>
                 </div>
                 
-                {/* Level-Up Bonus */}
                 <div className="col-span-4 text-center">
                   {tier.levelBonus > 0 ? (
                     <span className={`font-bold text-sm ${
@@ -231,7 +220,6 @@ export default function StatsPage() {
                   )}
                 </div>
                 
-                {/* Daily Bonus */}
                 <div className="col-span-3 text-right">
                   {tier.dailyBonus > 0 ? (
                     <span className={`font-medium text-sm ${

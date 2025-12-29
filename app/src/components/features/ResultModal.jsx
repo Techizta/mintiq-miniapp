@@ -2,14 +2,17 @@ import { motion } from 'framer-motion';
 import { Trophy, TrendingDown, Share2 } from 'lucide-react';
 import telegram from '../../services/telegram';
 import { formatSatz } from '../../utils/helpers';
+import { ShareWinButton } from './ShareButton';
 
 export default function ResultModal({ 
   isWin, 
   amount, 
   questTitle, 
+  questId,
   option, 
   onClose,
   onShare,
+  referralCode,
 }) {
   const handleShare = () => {
     telegram.hapticImpact('light');
@@ -27,7 +30,6 @@ export default function ResultModal({
 
   return (
     <div className="p-6 pt-8 text-center">
-      {/* Result icon */}
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
@@ -43,7 +45,6 @@ export default function ResultModal({
         )}
       </motion.div>
 
-      {/* Title */}
       <motion.h2
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -53,7 +54,6 @@ export default function ResultModal({
         {isWin ? 'You Won! 🎉' : 'Better Luck Next Time'}
       </motion.h2>
 
-      {/* Amount */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -65,7 +65,6 @@ export default function ResultModal({
         </p>
       </motion.div>
 
-      {/* Quest info */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -77,7 +76,6 @@ export default function ResultModal({
         <p className="text-dark-400 text-sm mt-2">Your answer: {option}</p>
       </motion.div>
 
-      {/* Actions */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -87,10 +85,20 @@ export default function ResultModal({
         <button onClick={onClose} className="btn-secondary flex-1">
           Close
         </button>
-        <button onClick={handleShare} className="btn-primary flex-1">
-          <Share2 size={18} />
-          Share
-        </button>
+        {isWin ? (
+          <ShareWinButton 
+            amount={amount}
+            questTitle={questTitle}
+            questId={questId}
+            referralCode={referralCode}
+            className="flex-1"
+          />
+        ) : (
+          <button onClick={handleShare} className="btn-primary flex-1">
+            <Share2 size={18} />
+            Share
+          </button>
+        )}
       </motion.div>
     </div>
   );

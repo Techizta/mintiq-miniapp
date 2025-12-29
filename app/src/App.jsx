@@ -37,7 +37,9 @@ import { useUserStore } from './stores/userStore';
 import SplashScreen from './components/shared/SplashScreen';
 import ErrorBoundary from './components/shared/ErrorBoundary';
 
-// Minimum splash screen display time (ms)
+// Engagement: Comeback Modal
+import ComebackModal, { useComebackModal } from './components/features/ComebackModal';
+
 const MIN_SPLASH_TIME = 1500;
 
 function App() {
@@ -46,33 +48,28 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [initStartTime] = useState(Date.now());
 
+  // Engagement: Comeback modal - only returns showModal and closeModal
+  const { showModal, closeModal } = useComebackModal();
+
   useEffect(() => {
-    // Initialize auth on mount
     initialize();
   }, [initialize]);
 
   useEffect(() => {
-    // Fetch user data when authenticated
     if (isAuthenticated) {
       fetchUser();
     }
   }, [isAuthenticated, fetchUser]);
 
   useEffect(() => {
-    // Ensure minimum splash display time for smooth UX
     if (isInitialized) {
       const elapsed = Date.now() - initStartTime;
       const remaining = Math.max(0, MIN_SPLASH_TIME - elapsed);
-      
-      const timer = setTimeout(() => {
-        setShowSplash(false);
-      }, remaining);
-      
+      const timer = setTimeout(() => setShowSplash(false), remaining);
       return () => clearTimeout(timer);
     }
   }, [isInitialized, initStartTime]);
 
-  // Show splash screen while initializing or minimum time not elapsed
   if (showSplash || !isInitialized) {
     return <SplashScreen />;
   }
@@ -81,7 +78,6 @@ function App() {
     <ErrorBoundary>
       <AnimatePresence mode="wait">
         <Routes>
-          {/* Main tabs with bottom navigation */}
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
             <Route path="predict" element={<PredictPage />} />
@@ -94,7 +90,6 @@ function App() {
             <Route path="wallet/redeem" element={<RedeemPage />} />
             <Route path="more" element={<MorePage />} />
             
-            {/* More sub-pages */}
             <Route path="friends" element={<FriendsPage />} />
             <Route path="challenges" element={<ChallengesPage />} />
             <Route path="groups" element={<GroupsPage />} />
@@ -106,7 +101,6 @@ function App() {
             <Route path="boosters" element={<BoostersPage />} />
             <Route path="stats" element={<StatsPage />} />
             
-            {/* Settings routes - consolidated into one page */}
             <Route path="settings" element={<SettingsPage />} />
             <Route path="settings/notifications" element={<SettingsPage />} />
             <Route path="settings/security" element={<SettingsPage />} />
@@ -114,10 +108,12 @@ function App() {
             <Route path="support" element={<SettingsPage />} />
           </Route>
           
-          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
+
+      {/* Engagement: Comeback Modal - only render when showModal is true */}
+      {showModal && <ComebackModal onClose={closeModal} />}
     </ErrorBoundary>
   );
 }
