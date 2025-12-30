@@ -32,7 +32,8 @@ import {
   Award,
   BarChart3,
   UserPlus,
-  Coins
+  Coins,
+  Bitcoin
 } from 'lucide-react';
 import { useUserStore } from '../stores/userStore';
 import { useUIStore } from '../stores/uiStore';
@@ -251,6 +252,7 @@ export default function MorePage() {
     { icon: Users, label: 'Friends', path: '/friends', color: 'text-blue-400', bg: 'bg-blue-500/20' },
     { icon: Zap, label: 'Boosters', path: '/boosters', color: 'text-purple-400', bg: 'bg-purple-500/20' },
     { icon: BarChart3, label: 'My Stats', path: '/stats', color: 'text-mint-400', bg: 'bg-mint-500/20' },
+    { icon: Bitcoin, label: 'Vault', path: '/vault', color: 'text-orange-400', bg: 'bg-orange-500/20' },
   ];
   
   // FIXED: All paths now point to /settings which handles all these sections
