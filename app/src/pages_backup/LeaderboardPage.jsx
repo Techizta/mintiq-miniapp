@@ -72,26 +72,19 @@ export default function LeaderboardPage() {
         period: timeConfig?.apiPeriod || 'all'
       });
       
-      console.log('[Leaderboard] Response:', response);
-      
       const data = response.leaderboard || response.users || [];
       setLeaderboard(data);
       
-      // Set user rank from response - handle both object and number formats
+      // Set user rank from response
       if (response.userRank) {
-        const rankData = typeof response.userRank === 'object' 
-          ? response.userRank 
-          : { rank: response.userRank };
-        
-        // Find user's data in the leaderboard
+        // Find user's data in the leaderboard or calculate
         const userEntry = data.find(e => e.id === user?.id || e.telegram_id === user?.telegram_id);
-        
         setUserRank({
-          rank: rankData.rank || 0,
-          score: rankData.score || userEntry?.score || 0,
-          total_earned: userEntry?.total_earned || rankData.total_earned || user?.total_earned || 0,
-          predictions_won: userEntry?.predictions_won || rankData.predictions_won || user?.predictions_won || 0,
-          referral_count: userEntry?.referral_count || rankData.referral_count || user?.referral_count || 0,
+          rank: response.userRank,
+          ...userEntry,
+          total_earned: userEntry?.total_earned || user?.total_earned || 0,
+          predictions_won: userEntry?.predictions_won || user?.predictions_won || 0,
+          referral_count: userEntry?.referral_count || user?.referral_count || 0,
         });
       } else {
         setUserRank(null);
@@ -138,10 +131,7 @@ export default function LeaderboardPage() {
       case 'wins':
         return entry.predictions_won || entry.wins || entry.score || 0;
       case 'referrals':
-        // FIXED: Prioritize referral_count, avoid falling back to score/earnings
-        const refCount = entry.referral_count ?? entry.referrals;
-        // Only use score if it's explicitly a referral-type score
-        return refCount !== undefined ? refCount : 0;
+        return entry.referral_count || entry.referrals || entry.score || 0;
       default:
         return entry.score || 0;
     }
@@ -151,7 +141,7 @@ export default function LeaderboardPage() {
     switch (activeType) {
       case 'earnings': return 'SATZ';
       case 'wins': return 'wins';
-      case 'referrals': return 'referrals'; // Changed from 'friends' for clarity
+      case 'referrals': return 'friends';
       default: return '';
     }
   };

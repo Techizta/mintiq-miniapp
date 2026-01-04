@@ -1,121 +1,122 @@
+import { useEffect, Suspense, lazy, Component } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
-
-// Layout
-import Layout from './components/layout/Layout';
-
-// Pages
-import HomePage from './pages/HomePage';
-import PredictPage from './pages/PredictPage';
-import QuestDetailPage from './pages/QuestDetailPage';
-import EarnPage from './pages/EarnPage';
-import PremiumPage from './pages/PremiumPage';
-import WalletPage from './pages/WalletPage';
-import MorePage from './pages/MorePage';
-
-// More Sub-pages
-import FriendsPage from './pages/FriendsPage';
-import ChallengesPage from './pages/ChallengesPage';
-import GroupsPage from './pages/GroupsPage';
-import GroupDetailPage from './pages/GroupDetailPage';
-import LeaderboardPage from './pages/LeaderboardPage';
-import VaultPage from './pages/VaultPage';
-import ShopPage from './pages/ShopPage';
-import BoostersPage from './pages/BoostersPage';
-import StatsPage from './pages/StatsPage';
-import SettingsPage from './pages/SettingsPage';
-import TasksPage from './pages/TasksPage';
-import RedeemPage from './pages/RedeemPage';
-import TransactionsPage from './pages/TransactionsPage';
-
-// Stores
-import { useAuthStore } from './stores/authStore';
 import { useUserStore } from './stores/userStore';
+import BottomNav from './components/layout/BottomNav';
+import LoadingScreen from './components/shared/LoadingScreen';
+import telegram from './services/telegram';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
 
-// Components
-import SplashScreen from './components/shared/SplashScreen';
-import ErrorBoundary from './components/shared/ErrorBoundary';
+const HomePage = lazy(() => import('./pages/HomePage'));
+const PoolsPage = lazy(() => import('./pages/PoolsPage'));
+const MinePage = lazy(() => import('./pages/MinePage'));
+const EarnPage = lazy(() => import('./pages/EarnPage'));
+const WalletPage = lazy(() => import('./pages/WalletPage'));
+const QuestDetailPage = lazy(() => import('./pages/QuestDetailPage'));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
+const FriendsPage = lazy(() => import('./pages/FriendsPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const PremiumPage = lazy(() => import('./pages/PremiumPage'));
 
-// Engagement: Comeback Modal
-import ComebackModal, { useComebackModal } from './components/features/ComebackModal';
-
-const MIN_SPLASH_TIME = 1500;
-
-function App() {
-  const { isInitialized, isAuthenticated, initialize } = useAuthStore();
-  const { fetchUser } = useUserStore();
-  const [showSplash, setShowSplash] = useState(true);
-  const [initStartTime] = useState(Date.now());
-
-  // Engagement: Comeback modal - only returns showModal and closeModal
-  const { showModal, closeModal } = useComebackModal();
-
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchUser();
-    }
-  }, [isAuthenticated, fetchUser]);
-
-  useEffect(() => {
-    if (isInitialized) {
-      const elapsed = Date.now() - initStartTime;
-      const remaining = Math.max(0, MIN_SPLASH_TIME - elapsed);
-      const timer = setTimeout(() => setShowSplash(false), remaining);
-      return () => clearTimeout(timer);
-    }
-  }, [isInitialized, initStartTime]);
-
-  if (showSplash || !isInitialized) {
-    return <SplashScreen />;
+// Global Error Boundary - prevents blank screens
+class AppErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorCode: null };
   }
 
+  static getDerivedStateFromError(error) {
+    return { 
+      hasError: true, 
+      error,
+      errorCode: `MINTIQ-${Date.now().toString(36).toUpperCase()}`
+    };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('[MintIQ] App Error:', error);
+    console.error('[MintIQ] Component Stack:', errorInfo.componentStack);
+  }
+
+  handleReload = () => {
+    window.location.reload();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-dark-950 flex flex-col items-center justify-center p-6 text-center">
+          <AlertTriangle className="w-16 h-16 text-orange-500 mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
+          <p className="text-dark-400 mb-2 max-w-sm">
+            We encountered an error loading MintIQ. Please try again.
+          </p>
+          <p className="text-dark-500 text-xs mb-6">
+            Error Code: {this.state.errorCode}
+          </p>
+          <button
+            onClick={this.handleReload}
+            className="flex items-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-colors"
+          >
+            <RefreshCw size={18} />
+            Reload App
+          </button>
+          {import.meta.env.DEV && this.state.error && (
+            <pre className="mt-6 p-4 bg-dark-800 rounded-lg text-left text-xs text-red-400 max-w-full overflow-auto max-h-40">
+              {this.state.error.toString()}
+              {'\n\n'}
+              {this.state.error.stack}
+            </pre>
+          )}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function AppContent() {
+  const { initialize } = useUserStore();
+
+  useEffect(() => {
+    console.log('[MintIQ] Initializing app...');
+    telegram.init();
+    telegram.ready();
+    telegram.expand();
+    // Initialize handles both auth and user data fetching
+    initialize();
+  }, []);
+
   return (
-    <ErrorBoundary>
-      <AnimatePresence mode="wait">
+    <div className="min-h-screen bg-dark-950 text-white">
+      <Suspense fallback={<LoadingScreen />}>
         <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<HomePage />} />
-            <Route path="predict" element={<PredictPage />} />
-            <Route path="predict/:questId" element={<QuestDetailPage />} />
-            <Route path="earn" element={<EarnPage />} />
-            <Route path="earn/tasks" element={<TasksPage />} />
-            <Route path="premium" element={<PremiumPage />} />
-            <Route path="wallet" element={<WalletPage />} />
-            <Route path="wallet/transactions" element={<TransactionsPage />} />
-            <Route path="wallet/redeem" element={<RedeemPage />} />
-            <Route path="more" element={<MorePage />} />
-            
-            <Route path="friends" element={<FriendsPage />} />
-            <Route path="challenges" element={<ChallengesPage />} />
-            <Route path="groups" element={<GroupsPage />} />
-            <Route path="groups/:groupId" element={<GroupDetailPage />} />
-            <Route path="leaderboard" element={<LeaderboardPage />} />
-            <Route path="ranks" element={<LeaderboardPage />} />
-            <Route path="vault" element={<VaultPage />} />
-            <Route path="shop" element={<ShopPage />} />
-            <Route path="boosters" element={<BoostersPage />} />
-            <Route path="stats" element={<StatsPage />} />
-            
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="settings/notifications" element={<SettingsPage />} />
-            <Route path="settings/security" element={<SettingsPage />} />
-            <Route path="settings/language" element={<SettingsPage />} />
-            <Route path="support" element={<SettingsPage />} />
-          </Route>
-          
+          <Route path="/" element={<HomePage />} />
+          <Route path="/pools" element={<PoolsPage />} />
+          <Route path="/predict" element={<PoolsPage />} />
+          <Route path="/quests/:questId" element={<QuestDetailPage />} />
+          <Route path="/mine" element={<MinePage />} />
+          <Route path="/earn" element={<EarnPage />} />
+          <Route path="/wallet" element={<WalletPage />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/friends" element={<FriendsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<ProfilePage />} />
+          <Route path="/premium" element={<PremiumPage />} />
+          <Route path="/elite" element={<PremiumPage />} />
+          <Route path="/more" element={<Navigate to="/profile" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </AnimatePresence>
-
-      {/* Engagement: Comeback Modal - only render when showModal is true */}
-      {showModal && <ComebackModal onClose={closeModal} />}
-    </ErrorBoundary>
+      </Suspense>
+      <BottomNav />
+    </div>
   );
 }
 
-export default App;
+// NOTE: BrowserRouter is in main.jsx - DO NOT add another one here!
+export default function App() {
+  return (
+    <AppErrorBoundary>
+      <AppContent />
+    </AppErrorBoundary>
+  );
+}

@@ -1,120 +1,50 @@
 /**
- * MintIQ UI Store - FIXED
- * 
- * Key Fixes:
- * - Celebration no longer auto-dismisses (component handles it)
- * - Added clearCelebration for manual dismissal
+ * MintIQ UI Store
  */
 
 import { create } from 'zustand';
 
 export const useUIStore = create((set, get) => ({
-  // Modal state
-  modal: {
-    isOpen: false,
-    type: null,
-    props: {},
-  },
-
-  // Toast notifications
-  toasts: [],
-
-  // Loading states
-  isGlobalLoading: false,
-
-  // Bottom sheet
-  bottomSheet: {
-    isOpen: false,
-    content: null,
-  },
-
-  // Tab bar visibility
-  isTabBarVisible: true,
-
-  // Actions
-  openModal: (type, props = {}) => {
-    set({
-      modal: {
-        isOpen: true,
-        type,
-        props,
-      },
-    });
-  },
-
-  closeModal: () => {
-    set({
-      modal: {
-        isOpen: false,
-        type: null,
-        props: {},
-      },
-    });
-  },
+  toast: null,
+  celebration: null,
+  modal: null,
 
   showToast: (message, type = 'info', duration = 3000) => {
-    const id = Date.now();
-    const toast = { id, message, type, duration };
-
-    set({
-      toasts: [...get().toasts, toast],
-    });
-
-    // Auto remove
-    if (duration > 0) {
-      setTimeout(() => {
-        get().removeToast(id);
-      }, duration);
-    }
-
-    return id;
+    set({ toast: { message, type, id: Date.now() } });
+    
+    setTimeout(() => {
+      set(state => {
+        if (state.toast?.id === get().toast?.id) {
+          return { toast: null };
+        }
+        return state;
+      });
+    }, duration);
   },
 
-  removeToast: (id) => {
-    set({
-      toasts: get().toasts.filter((t) => t.id !== id),
-    });
+  hideToast: () => {
+    set({ toast: null });
   },
-
-  clearToasts: () => {
-    set({ toasts: [] });
-  },
-
-  setGlobalLoading: (isLoading) => {
-    set({ isGlobalLoading: isLoading });
-  },
-
-  openBottomSheet: (content) => {
-    set({
-      bottomSheet: {
-        isOpen: true,
-        content,
-      },
-    });
-  },
-
-  closeBottomSheet: () => {
-    set({
-      bottomSheet: {
-        isOpen: false,
-        content: null,
-      },
-    });
-  },
-
-  setTabBarVisible: (visible) => {
-    set({ isTabBarVisible: visible });
-  },
-
-  // Celebration animations - FIXED: No auto-dismiss, component handles it
-  celebration: null,
 
   showCelebration: (type, data = {}) => {
-    set({ celebration: { type, data } });
-    // Don't auto-dismiss - the Celebration component has its own countdown and dismiss logic
+    set({ celebration: { type, data, id: Date.now() } });
+    
+    setTimeout(() => {
+      set({ celebration: null });
+    }, 3000);
   },
 
-  clearCelebration: () => {
+  hideCelebration: () => {
     set({ celebration: null });
   },
+
+  showModal: (type, data = {}) => {
+    set({ modal: { type, data } });
+  },
+
+  hideModal: () => {
+    set({ modal: null });
+  }
 }));
+
+export default useUIStore;

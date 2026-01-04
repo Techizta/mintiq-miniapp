@@ -23,8 +23,13 @@ if (window.Telegram?.WebApp) {
   
   // Add class to body
   document.body.classList.add('tg-webapp');
+  
+  console.log('[MintIQ] Telegram WebApp initialized');
+} else {
+  console.log('[MintIQ] Running in browser mode (no Telegram)');
 }
 
+// IMPORTANT: BrowserRouter is here - DO NOT add another one in App.jsx!
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>

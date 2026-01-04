@@ -34,7 +34,6 @@ import {
   calculateOdds, 
   calculateMultiplier, 
   calculatePotentialWin,
-  calculateMultiplierAfterBet,
   satzUsdValue,
   formatSatzWithUsd,
   getCategoryEmoji

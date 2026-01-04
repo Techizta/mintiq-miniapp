@@ -1,370 +1,341 @@
 /**
- * MintIQ WalletPage - REDESIGNED
+ * MintIQ WalletPage - SIMPLIFIED VERSION
  * 
- * Key Changes:
- * - USD value prominently displayed
- * - Withdrawal progress always visible
- * - Clear breakdown of earnings
- * - Quick actions for redeem
+ * Features:
+ * - Balance display (SATZ only, no BTC)
+ * - Stats cards
+ * - Transaction history with tabs (All, Earned, Spent)
+ * - Pagination with load more
+ * - NO withdrawal (token launch planned)
  */
 
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  History, 
-  ChevronRight,
-  Zap,
-  TrendingUp,
-  Gift,
-  Trophy,
-  Users,
-  Lock,
-  Unlock,
-  Info,
-  Copy,
-  Check
+  ArrowLeft, ArrowUpRight, ArrowDownLeft, Wallet, TrendingUp, 
+  Target, Percent, Clock, CheckCircle, XCircle, X,
+  ChevronDown, RefreshCw, Coins, Trophy
 } from 'lucide-react';
 import { useUserStore } from '../stores/userStore';
 import { useUIStore } from '../stores/uiStore';
 import api from '../services/api';
 import telegram from '../services/telegram';
-import { 
-  formatSatz, 
-  formatCompact,
-  satzUsdValue,
-  formatSatzWithUsd,
-  getWithdrawalProgress,
-  formatToMilestone,
-  getTierInfo,
-  formatRelativeTime,
-  copyToClipboard,
-  setBtcPrice
-} from '../utils/helpers';
+import { formatSatz } from '../utils/helpers';
 
 // ============================================
-// CONSTANTS
+// TRANSACTION ITEM
 // ============================================
 
-const WITHDRAWAL_MINIMUM = 50000;
+function TransactionItem({ tx }) {
+  const getIcon = () => {
+    switch (tx.type) {
+      case 'prediction_win':
+      case 'pool_win':
+      case 'quest_win':
+        return <TrendingUp size={16} className="text-green-400" />;
+      case 'prediction_bet':
+      case 'pool_bet':
+        return <Target size={16} className="text-orange-400" />;
+      case 'daily_login':
+      case 'daily_reward':
+        return <CheckCircle size={16} className="text-blue-400" />;
+      case 'referral_commission':
+      case 'referral_bonus':
+        return <ArrowDownLeft size={16} className="text-purple-400" />;
+      case 'tier_bonus':
+        return <Trophy size={16} className="text-gold-400" />;
+      case 'tap_mining':
+        return <Coins size={16} className="text-orange-400" />;
+      default:
+        return tx.amount > 0 
+          ? <ArrowDownLeft size={16} className="text-green-400" />
+          : <ArrowUpRight size={16} className="text-red-400" />;
+    }
+  };
+
+  const getLabel = () => {
+    const labels = {
+      'prediction_win': 'Prediction Won',
+      'prediction_bet': 'Prediction Placed',
+      'pool_win': 'Pool Won',
+      'pool_bet': 'Pool Entry',
+      'daily_login': 'Daily Reward',
+      'daily_reward': 'Daily Reward',
+      'referral_commission': 'Referral Commission',
+      'referral_bonus': 'Referral Bonus',
+      'tier_bonus': 'Tier Bonus',
+      'tap_mining': 'Tap Mining',
+      'ad_reward': 'Ad Reward',
+      'quest_win': 'Quest Won',
+      'welcome_bonus': 'Welcome Bonus',
+      'streak_milestone': 'Streak Milestone',
+      'pool_creator_fee': 'Creator Fee',
+      'channel_bonus': 'Channel Bonus',
+      'task_reward': 'Task Reward',
+      'leaderboard_reward': 'Leaderboard Reward',
+    };
+    return labels[tx.type] || tx.description || tx.type;
+  };
+
+  const amount = Number(tx.amount) || 0;
+  const isPositive = amount > 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0"
+    >
+      <div className="w-10 h-10 bg-dark-800 rounded-full flex items-center justify-center">
+        {getIcon()}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-white truncate">{getLabel()}</p>
+        <p className="text-xs text-dark-500">
+          {new Date(tx.created_at).toLocaleDateString()} • {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </p>
+      </div>
+      <p className={`text-sm font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+        {isPositive ? '+' : ''}{formatSatz(amount)}
+      </p>
+    </motion.div>
+  );
+}
+
+// ============================================
+// MAIN WALLET PAGE
+// ============================================
 
 export default function WalletPage() {
   const navigate = useNavigate();
   const { user, fetchUser } = useUserStore();
   const { showToast } = useUIStore();
   
-  // State
   const [transactions, setTransactions] = useState([]);
-  const [btcPrice, setBtcPriceState] = useState(100000);
   const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState(null);
-  const [copied, setCopied] = useState(false);
-
-  // ============================================
-  // DATA FETCHING
-  // ============================================
-
-  useEffect(() => {
-    loadData();
-  }, []);
+  const [activeTab, setActiveTab] = useState('all'); // all, earned, spent
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
-  const loadData = async () => {
-    setIsLoading(true);
+  const ITEMS_PER_PAGE = 20;
+  
+  const balance = Number(user?.satz_balance) || 0;
+  const totalEarned = Number(user?.total_earned) || 0;
+  const totalSpent = Number(user?.total_spent) || 0;
+  const totalWon = Number(user?.total_won) || 0;
+  const predictionsWon = Number(user?.predictions_won) || 0;
+  const predictionsMade = Number(user?.predictions_made) || 0;
+  const winRate = predictionsMade > 0 ? Math.round((predictionsWon / predictionsMade) * 100) : 0;
+
+  // Load transactions
+  const loadTransactions = useCallback(async (pageNum = 1, append = false) => {
+    if (pageNum === 1) setIsLoading(true);
+    else setIsLoadingMore(true);
+    
     try {
-      await Promise.all([
-        fetchUser(true),
-        fetchTransactions(),
-        fetchBtcPrice(),
-      ]);
+      const response = await api.get('/api/miniapp/user/transactions', {
+        params: {
+          page: pageNum,
+          limit: ITEMS_PER_PAGE,
+          type: activeTab === 'all' ? undefined : activeTab
+        }
+      });
+      
+      const newTxs = response?.transactions || [];
+      
+      if (append) {
+        setTransactions(prev => [...prev, ...newTxs]);
+      } else {
+        setTransactions(newTxs);
+      }
+      
+      setHasMore(newTxs.length === ITEMS_PER_PAGE);
+      setPage(pageNum);
     } catch (e) {
-      console.error('Wallet load error:', e);
+      console.error('Failed to load transactions:', e);
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
-  };
-  
-  const fetchTransactions = async () => {
-    try {
-      const response = await api.get('/api/miniapp/user/transactions', { limit: 10 });
-      setTransactions(response.transactions || []);
-    } catch (e) {
-      console.error('Transactions fetch error:', e);
-    }
-  };
-  
-  const fetchBtcPrice = async () => {
-    try {
-      const response = await api.get('/api/miniapp/public/stats');
-      if (response?.btcPrice) {
-        setBtcPrice(response.btcPrice);
-        setBtcPriceState(response.btcPrice);
-      }
-    } catch (e) {
-      console.error('BTC price fetch error:', e);
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchUser();
+    loadTransactions(1, false);
+  }, [activeTab]);
+
+  const handleLoadMore = () => {
+    if (!isLoadingMore && hasMore) {
+      loadTransactions(page + 1, true);
     }
   };
 
-  // ============================================
-  // HANDLERS
-  // ============================================
-
-  const handleCopyReferral = async () => {
-    if (user?.referral_code) {
-      await copyToClipboard(`https://t.me/MintIQBot?start=${user.referral_code}`);
-      setCopied(true);
-      telegram.hapticNotification('success');
-      showToast('Referral link copied!', 'success');
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  // ============================================
-  // COMPUTED
-  // ============================================
-
-  const balance = Number(user?.satz_balance) || 0;
-  const balanceUsd = satzUsdValue(balance, btcPrice);
-  const withdrawalProgress = getWithdrawalProgress(balance);
-  const tierInfo = getTierInfo(user?.tier || user?.status_tier || 'newcomer');
-
-  // Transaction type info
-  const getTransactionInfo = (type) => {
-    const types = {
-      prediction_win: { icon: Trophy, color: 'text-green-400', bgColor: 'bg-green-500/20', label: 'Prediction Win' },
-      prediction_bet: { icon: ArrowUpRight, color: 'text-red-400', bgColor: 'bg-red-500/20', label: 'Prediction' },
-      daily_login: { icon: Gift, color: 'text-gold-400', bgColor: 'bg-gold-500/20', label: 'Daily Reward' },
-      daily_reward: { icon: Gift, color: 'text-gold-400', bgColor: 'bg-gold-500/20', label: 'Daily Reward' },
-      referral: { icon: Users, color: 'text-blue-400', bgColor: 'bg-blue-500/20', label: 'Referral' },
-      task_reward: { icon: Zap, color: 'text-purple-400', bgColor: 'bg-purple-500/20', label: 'Task' },
-      spin_reward: { icon: Gift, color: 'text-pink-400', bgColor: 'bg-pink-500/20', label: 'Spin' },
-      welcome_bonus: { icon: Gift, color: 'text-mint-400', bgColor: 'bg-mint-500/20', label: 'Welcome' },
-      booster_purchase: { icon: Zap, color: 'text-orange-400', bgColor: 'bg-orange-500/20', label: 'Booster' },
-      redemption: { icon: ArrowUpRight, color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', label: 'Withdrawal' },
-    };
-    return types[type] || { icon: TrendingUp, color: 'text-dark-400', bgColor: 'bg-dark-700', label: type };
-  };
-
-  // ============================================
-  // RENDER
-  // ============================================
+  // Filter transactions by tab
+  const filteredTransactions = transactions.filter(tx => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'earned') return Number(tx.amount) > 0;
+    if (activeTab === 'spent') return Number(tx.amount) < 0;
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-dark-950 pb-24">
-      {/* Balance Header */}
-      <div className="bg-gradient-to-b from-dark-800 via-dark-850 to-dark-950 px-4 pt-6 pb-8">
-        {/* Main Balance */}
-        <div className="text-center mb-6">
-          <p className="text-sm text-dark-400 mb-1">Your Balance</p>
-          <h1 className="text-4xl font-black text-white mb-1">
-            {formatSatz(balance)}
-            <span className="text-xl text-dark-400 ml-2">SATZ</span>
-          </h1>
-          <p className="text-lg text-mint-400 font-medium">{balanceUsd}</p>
-          <p className="text-xs text-dark-500 mt-1">1 SATZ = 1 Satoshi</p>
-        </div>
-
-        {/* Withdrawal Progress */}
-        <div className="bg-dark-800/70 rounded-2xl p-4 backdrop-blur-sm border border-white/5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              {withdrawalProgress.canWithdraw ? (
-                <Unlock size={16} className="text-green-400" />
-              ) : (
-                <Lock size={16} className="text-dark-400" />
-              )}
-              <span className="text-sm font-medium text-white">
-                {withdrawalProgress.canWithdraw ? 'Ready to Withdraw!' : 'Progress to Withdrawal'}
-              </span>
-            </div>
-            <span className="text-sm text-dark-400">
-              {formatSatz(balance)} / {formatSatz(WITHDRAWAL_MINIMUM)}
-            </span>
-          </div>
-          
-          <div className="h-3 bg-dark-700 rounded-full overflow-hidden mb-3">
-            <motion.div
-              className={`h-full rounded-full ${
-                withdrawalProgress.canWithdraw 
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-400' 
-                  : 'bg-gradient-to-r from-mint-500 to-cyan-400'
-              }`}
-              initial={{ width: 0 }}
-              animate={{ width: `${withdrawalProgress.percentage}%` }}
-              transition={{ duration: 1, ease: 'easeOut' }}
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-dark-400">
-              {withdrawalProgress.canWithdraw 
-                ? '🎉 You can withdraw now!'
-                : formatToMilestone(balance)
-              }
-            </p>
-            {withdrawalProgress.canWithdraw ? (
-              <Link 
-                to="/wallet/redeem"
-                className="px-4 py-1.5 bg-green-500 text-white rounded-lg text-xs font-semibold"
-              >
-                Withdraw
-              </Link>
-            ) : (
-              <span className="text-xs text-dark-500">
-                {withdrawalProgress.percentage.toFixed(0)}% complete
-              </span>
-            )}
-          </div>
-        </div>
+      {/* Header */}
+      <div className="bg-dark-900 border-b border-white/5 px-4 py-4 flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="text-dark-400">
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="text-lg font-bold text-white flex items-center gap-2">
+          <Wallet size={20} className="text-orange-400" />
+          Wallet
+        </h1>
       </div>
 
-      <div className="px-4 space-y-4 -mt-2">
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
-          <Link 
-            to="/wallet/redeem"
-            className={`p-4 rounded-xl border ${
-              withdrawalProgress.canWithdraw 
-                ? 'bg-green-500/10 border-green-500/30 hover:border-green-500' 
-                : 'bg-dark-800 border-white/5'
-            } transition-colors`}
-          >
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 ${
-              withdrawalProgress.canWithdraw ? 'bg-green-500/20' : 'bg-dark-700'
-            }`}>
-              <ArrowUpRight size={20} className={withdrawalProgress.canWithdraw ? 'text-green-400' : 'text-dark-400'} />
-            </div>
-            <h3 className="font-semibold text-white text-sm">Withdraw</h3>
-            <p className="text-xs text-dark-400">
-              {withdrawalProgress.canWithdraw ? 'Ready!' : `Min ${formatSatz(WITHDRAWAL_MINIMUM)}`}
-            </p>
-          </Link>
-          
-          <Link 
-            to="/wallet/transactions"
-            className="bg-dark-800 p-4 rounded-xl border border-white/5 hover:border-mint-500/30 transition-colors"
-          >
-            <div className="w-10 h-10 bg-dark-700 rounded-xl flex items-center justify-center mb-2">
-              <History size={20} className="text-dark-300" />
-            </div>
-            <h3 className="font-semibold text-white text-sm">History</h3>
-            <p className="text-xs text-dark-400">View all transactions</p>
-          </Link>
-        </div>
+      <div className="p-4 space-y-4">
+        {/* Balance Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-br from-orange-500/20 to-yellow-500/10 border border-orange-500/20 rounded-2xl p-5"
+        >
+          <p className="text-dark-400 text-sm mb-1">Your Balance</p>
+          <p className="text-4xl font-bold text-white mb-1">
+            {formatSatz(balance)} <span className="text-lg text-dark-400">SATZ</span>
+          </p>
+          <p className="text-xs text-dark-500">
+            🚀 Token launch coming soon!
+          </p>
+        </motion.div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-dark-800 rounded-xl p-3 text-center">
-            <p className="text-lg font-bold text-white">{formatCompact(user?.total_earned || 0)}</p>
-            <p className="text-2xs text-dark-400">Total Earned</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-dark-800/50 rounded-xl p-4 border border-white/5">
+            <div className="flex items-center gap-2 text-dark-400 mb-2">
+              <TrendingUp size={16} />
+              <span className="text-xs">Total Earned</span>
+            </div>
+            <p className="text-xl font-bold text-green-400">+{formatSatz(totalEarned)}</p>
           </div>
-          <div className="bg-dark-800 rounded-xl p-3 text-center">
-            <p className="text-lg font-bold text-white">{formatCompact(user?.total_won || 0)}</p>
-            <p className="text-2xs text-dark-400">SATZ Won</p>
+          
+          <div className="bg-dark-800/50 rounded-xl p-4 border border-white/5">
+            <div className="flex items-center gap-2 text-dark-400 mb-2">
+              <Target size={16} />
+              <span className="text-xs">Total Spent</span>
+            </div>
+            <p className="text-xl font-bold text-red-400">-{formatSatz(totalSpent)}</p>
           </div>
-          <div className="bg-dark-800 rounded-xl p-3 text-center">
-            <p className="text-lg font-bold text-white">{user?.referral_count || 0}</p>
-            <p className="text-2xs text-dark-400">Referrals</p>
+
+          <div className="bg-dark-800/50 rounded-xl p-4 border border-white/5">
+            <div className="flex items-center gap-2 text-dark-400 mb-2">
+              <CheckCircle size={16} />
+              <span className="text-xs">Predictions Won</span>
+            </div>
+            <p className="text-xl font-bold text-white">{predictionsWon}</p>
+            <p className="text-xs text-dark-500">of {predictionsMade} made</p>
+          </div>
+
+          <div className="bg-dark-800/50 rounded-xl p-4 border border-white/5">
+            <div className="flex items-center gap-2 text-dark-400 mb-2">
+              <Percent size={16} />
+              <span className="text-xs">Win Rate</span>
+            </div>
+            <p className="text-xl font-bold text-white">{winRate}%</p>
+            <p className="text-xs text-dark-500">{formatSatz(totalWon)} won</p>
           </div>
         </div>
 
-        {/* Referral Earnings */}
-        <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Users size={18} className="text-blue-400" />
-              <span className="font-semibold text-white">Referral Earnings</span>
-            </div>
-            <span className="text-sm text-blue-400 font-medium">7% lifetime</span>
+        {/* Transaction History */}
+        <div className="bg-dark-800/50 rounded-xl border border-white/5 overflow-hidden">
+          {/* Tabs */}
+          <div className="flex border-b border-white/5">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'earned', label: 'Earned' },
+              { id: 'spent', label: 'Spent' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => { telegram.hapticSelection(); setActiveTab(tab.id); }}
+                className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'text-orange-400 border-b-2 border-orange-400'
+                    : 'text-dark-400'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-          
-          <p className="text-xs text-dark-400 mb-3">
-            Earn 7% of everything your friends earn, forever!
-          </p>
-          
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={handleCopyReferral}
-            className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-500/20 hover:bg-blue-500/30 rounded-xl transition-colors"
-          >
-            {copied ? (
-              <>
-                <Check size={16} className="text-green-400" />
-                <span className="text-sm font-medium text-green-400">Copied!</span>
-              </>
+
+          {/* Transaction List */}
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium text-white text-sm">Transaction History</h3>
+              <button 
+                onClick={() => loadTransactions(1, false)}
+                className="text-dark-400 p-1"
+              >
+                <RefreshCw size={16} />
+              </button>
+            </div>
+
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="animate-pulse flex items-center gap-3 py-3">
+                    <div className="w-10 h-10 bg-dark-700 rounded-full" />
+                    <div className="flex-1">
+                      <div className="h-4 bg-dark-700 rounded w-2/3 mb-2" />
+                      <div className="h-3 bg-dark-700 rounded w-1/3" />
+                    </div>
+                    <div className="h-4 bg-dark-700 rounded w-16" />
+                  </div>
+                ))}
+              </div>
+            ) : filteredTransactions.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-dark-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Clock size={24} className="text-dark-500" />
+                </div>
+                <p className="text-dark-400 text-sm">No transactions yet</p>
+                <p className="text-dark-500 text-xs mt-1">
+                  {activeTab === 'earned' ? 'Start earning SATZ!' : 
+                   activeTab === 'spent' ? 'Make predictions to see spending' :
+                   'Your activity will appear here'}
+                </p>
+              </div>
             ) : (
               <>
-                <Copy size={16} className="text-blue-400" />
-                <span className="text-sm font-medium text-blue-400">Copy Referral Link</span>
+                <div className="divide-y divide-white/5">
+                  {filteredTransactions.map((tx, i) => (
+                    <TransactionItem key={tx.id || i} tx={tx} />
+                  ))}
+                </div>
+
+                {/* Load More */}
+                {hasMore && (
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    className="w-full mt-4 py-3 bg-dark-700 rounded-xl text-dark-400 text-sm flex items-center justify-center gap-2"
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-dark-500 border-t-white rounded-full animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown size={16} />
+                        Load More
+                      </>
+                    )}
+                  </button>
+                )}
               </>
             )}
-          </motion.button>
-        </div>
-
-        {/* Recent Transactions */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-white">Recent Activity</h2>
-            <Link to="/wallet/transactions" className="text-mint-400 text-xs flex items-center">
-              View all <ChevronRight size={14} />
-            </Link>
-          </div>
-          
-          {transactions.length === 0 ? (
-            <div className="text-center py-8 bg-dark-800 rounded-xl">
-              <History size={32} className="mx-auto mb-2 text-dark-600" />
-              <p className="text-dark-400 text-sm">No transactions yet</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {transactions.slice(0, 5).map((tx) => {
-                const info = getTransactionInfo(tx.type);
-                const Icon = info.icon;
-                const isPositive = Number(tx.amount) > 0;
-                
-                return (
-                  <div 
-                    key={tx.id}
-                    className="bg-dark-800 rounded-xl p-3 flex items-center gap-3"
-                  >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${info.bgColor}`}>
-                      <Icon size={18} className={info.color} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">
-                        {tx.description || info.label}
-                      </p>
-                      <p className="text-xs text-dark-500">
-                        {formatRelativeTime(tx.created_at)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                        {isPositive ? '+' : ''}{formatSatz(tx.amount)}
-                      </p>
-                      <p className="text-xs text-dark-500">
-                        {satzUsdValue(Math.abs(tx.amount), btcPrice)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Info Box */}
-        <div className="bg-dark-800/50 rounded-xl p-4 border border-white/5">
-          <div className="flex items-start gap-3">
-            <Info size={18} className="text-dark-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-white mb-1">About SATZ</p>
-              <p className="text-xs text-dark-400">
-                1 SATZ = 1 satoshi = 0.00000001 BTC. Your SATZ is always backed 1:1 by real Bitcoin in our vault. 
-                Withdraw anytime once you reach {formatSatz(WITHDRAWAL_MINIMUM)} SATZ.
-              </p>
-            </div>
           </div>
         </div>
       </div>

@@ -1,298 +1,268 @@
 /**
  * MintIQ API Service
- * Handles all API communication with the backend
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.mintiq.world';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 class ApiService {
   constructor() {
-    this.baseUrl = API_BASE_URL;
+    this.baseUrl = API_BASE;
     this.token = null;
+    this.initData = null;
   }
 
+  // Initialize with Telegram data
+  init(initData) {
+    this.initData = initData;
+  }
+
+  // Set JWT token for authenticated requests
   setToken(token) {
     this.token = token;
+    console.log('[MintIQ API] Token set');
   }
 
+  // Clear token (logout)
   clearToken() {
     this.token = null;
+    console.log('[MintIQ API] Token cleared');
   }
 
-  async request(endpoint, options = {}) {
-    const url = `${this.baseUrl}${endpoint}`;
+  // Get auth headers
+  getHeaders() {
     const headers = {
       'Content-Type': 'application/json',
-      ...options.headers,
     };
+
+    // Add JWT token if available
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
+
+    // Add Telegram init data
+    if (this.initData) {
+      headers['X-Telegram-Init-Data'] = this.initData;
+    }
+
+    // Try to get from WebApp
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp?.initData) {
+      headers['X-Telegram-Init-Data'] = window.Telegram.WebApp.initData;
+    }
+
+    return headers;
+  }
+
+  // Generic request handler
+  async request(method, endpoint, data = null, params = null) {
+    let url = `${this.baseUrl}${endpoint}`;
+
+    // Add query params
+    if (params) {
+      const queryString = new URLSearchParams(params).toString();
+      url += `?${queryString}`;
+    }
+
+    const options = {
+      method,
+      headers: this.getHeaders(),
+    };
+
+    if (data && method !== 'GET') {
+      options.body = JSON.stringify(data);
+    }
+
     try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-      });
+      console.log(`[MintIQ API] ${method} ${endpoint}`);
+      const response = await fetch(url, options);
+      
+      // Handle non-JSON responses
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         if (!response.ok) {
-          throw new Error("HTTP " + response.status + ": " + response.statusText);
+          throw new Error(`HTTP ${response.status}`);
         }
         return null;
       }
-      const data = await response.json();
+
+      const json = await response.json();
+
       if (!response.ok) {
-        throw new Error(data.error || data.message || "HTTP " + response.status);
+        throw new Error(json.error || json.message || `HTTP ${response.status}`);
       }
-      return data;
+
+      return json;
     } catch (error) {
-      console.error("API Error [" + endpoint + "]:", error);
+      console.error(`[MintIQ API] ${method} ${endpoint} error:`, error.message);
       throw error;
     }
   }
 
-  // GET request
-  get(endpoint, params = {}) {
-    const searchParams = new URLSearchParams(params);
-    const queryString = searchParams.toString();
-    const url = queryString ? `${endpoint}?${queryString}` : endpoint;
-    return this.request(url, { method: 'GET' });
+  // Convenience methods
+  get(endpoint, params = null) {
+    return this.request('GET', endpoint, null, params);
   }
 
-  // POST request
-  post(endpoint, data = {}) {
-    return this.request(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  post(endpoint, data = null) {
+    return this.request('POST', endpoint, data);
   }
 
-  // PUT request
-  put(endpoint, data = {}) {
-    return this.request(endpoint, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
+  put(endpoint, data = null) {
+    return this.request('PUT', endpoint, data);
   }
 
-  // DELETE request
   delete(endpoint) {
-    return this.request(endpoint, { method: 'DELETE' });
+    return this.request('DELETE', endpoint);
   }
 
-  // ============================================
-  // AUTH ENDPOINTS
-  // ============================================
-
+  // ==========================================
+  // AUTHENTICATION
+  // ==========================================
+  
+  // Authenticate with Telegram initData
   async authenticate(initData) {
-    return this.post('/api/miniapp/auth', { initData });
+    const response = await this.post('/api/miniapp/auth', { initData });
+    if (response.token) {
+      this.setToken(response.token);
+    }
+    return response;
   }
 
-  // ============================================
-  // USER ENDPOINTS
-  // ============================================
-
-  async getProfile() {
+  // ==========================================
+  // USER PROFILE
+  // ==========================================
+  
+  getProfile() {
     return this.get('/api/miniapp/user/profile');
   }
 
-  async getBalance() {
+  updateProfile(data) {
+    return this.put('/api/miniapp/user/profile', data);
+  }
+
+  getBalance() {
     return this.get('/api/miniapp/user/balance');
   }
 
-  async getStats() {
-    return this.get('/api/miniapp/user/stats');
-  }
-
-  async updateSettings(settings) {
-    return this.put('/api/miniapp/user/settings', settings);
-  }
-
-  async getTransactions(params = {}) {
+  getTransactions(params) {
     return this.get('/api/miniapp/user/transactions', params);
   }
 
-  // ============================================
-  // QUEST ENDPOINTS
-  // ============================================
-
-  async getQuests(params = {}) {
+  // ==========================================
+  // QUESTS / POOLS
+  // ==========================================
+  
+  getQuests(params) {
     return this.get('/api/miniapp/quests', params);
   }
 
-  async getQuestById(questId) {
-    return this.get(`/api/miniapp/quests/${questId}`);
+  getQuest(id) {
+    return this.get(`/api/miniapp/quests/${id}`);
   }
 
-  async placeBet(questId, data) {
-    return this.post(`/api/miniapp/quests/${questId}/bet`, data);
+  placeBet(questId, data) {
+    return this.post(`/api/miniapp/quests/${questId}/predict`, data);
   }
 
-  async getMyPredictions(params = {}) {
-    return this.get('/api/miniapp/predictions', params);
+  // ==========================================
+  // DAILY REWARDS
+  // ==========================================
+  
+  getDailyReward() {
+    return this.get('/api/miniapp/daily-check');
   }
 
-  // ============================================
-  // EARN ENDPOINTS
-  // ============================================
-
-  async getDailyReward() {
-    return this.get('/api/miniapp/earn/daily');
+  claimDailyReward() {
+    return this.post('/api/miniapp/daily-check/claim');
   }
 
-  async claimDailyReward() {
-    return this.post('/api/miniapp/earn/daily/claim');
+  // ==========================================
+  // EARN / TASKS
+  // ==========================================
+  
+  getTasks() {
+    return this.get('/api/miniapp/tasks');
   }
 
-  async spinWheel() {
+  completeTask(taskId) {
+    return this.post(`/api/miniapp/tasks/${taskId}/complete`);
+  }
+
+  getSpinStatus() {
+    return this.get('/api/miniapp/earn/spin/status');
+  }
+
+  spin() {
     return this.post('/api/miniapp/earn/spin');
   }
 
-  async getTasks() {
-    return this.get('/api/miniapp/earn/tasks');
-  }
-
-  async startTask(taskId) {
-    return this.post(`/api/miniapp/earn/tasks/${taskId}/start`);
-  }
-
-  async verifyTask(taskId, data = {}) {
-    return this.post(`/api/miniapp/earn/tasks/${taskId}/verify`, data);
-  }
-
-  async watchAd() {
-    return this.post('/api/miniapp/earn/watch-ad');
-  }
-
-  // ============================================
-  // SOCIAL ENDPOINTS
-  // ============================================
-
-  async getFriends() {
+  // ==========================================
+  // REFERRALS / FRIENDS
+  // ==========================================
+  
+  getFriends() {
     return this.get('/api/miniapp/friends');
   }
 
-  async getFriendRequests() {
-    return this.get('/api/miniapp/friends/requests');
+  getReferralStats() {
+    return this.get('/api/miniapp/referral/stats');
   }
 
-  async addFriend(username) {
-    return this.post('/api/miniapp/friends/add', { username });
+  // ==========================================
+  // LEADERBOARD
+  // ==========================================
+  
+  getLeaderboard(params) {
+    return this.get('/api/miniapp/leaderboard', params);
   }
 
-  async acceptFriend(friendId) {
-    return this.post(`/api/miniapp/friends/${friendId}/accept`);
+  // ==========================================
+  // HOME PAGE DATA
+  // ==========================================
+  
+  getFeaturedQuest() {
+    return this.get('/api/miniapp/home/featured');
   }
 
-  async declineFriend(friendId) {
-    return this.post(`/api/miniapp/friends/${friendId}/decline`);
+  getLiveActivity() {
+    return this.get('/api/miniapp/live/activity');
   }
 
-  async removeFriend(friendId) {
-    return this.delete(`/api/miniapp/friends/${friendId}`);
+  getWithdrawalProgress() {
+    return this.get('/api/miniapp/withdrawal/progress');
   }
 
-  // ============================================
-  // CHALLENGE ENDPOINTS
-  // ============================================
-
-  async getChallenges(params = {}) {
-    return this.get('/api/miniapp/challenges', params);
+  // ==========================================
+  // BOOSTERS
+  // ==========================================
+  
+  getActiveBooster() {
+    return this.get('/api/miniapp/boosters/active');
   }
 
-  async createChallenge(data) {
-    return this.post('/api/miniapp/challenges', data);
+  getBoosterConfig() {
+    return this.get('/api/miniapp/boosters/config');
   }
 
-  async acceptChallenge(challengeId) {
-    return this.post(`/api/miniapp/challenges/${challengeId}/accept`);
+  activateBooster(boosterId) {
+    return this.post('/api/miniapp/boosters/activate', { boosterId });
   }
 
-  async declineChallenge(challengeId) {
-    return this.post(`/api/miniapp/challenges/${challengeId}/decline`);
+  // ==========================================
+  // PREMIUM
+  // ==========================================
+  
+  getPremiumStatus() {
+    return this.get('/api/miniapp/premium/status');
   }
 
-  // ============================================
-  // GROUP ENDPOINTS
-  // ============================================
-
-  async getGroups() {
-    return this.get('/api/miniapp/groups');
-  }
-
-  async createGroup(data) {
-    return this.post('/api/miniapp/groups', data);
-  }
-
-  async getGroupById(groupId) {
-    return this.get(`/api/miniapp/groups/${groupId}`);
-  }
-
-  async joinGroup(inviteCode) {
-    return this.post('/api/miniapp/groups/join', { inviteCode });
-  }
-
-  async leaveGroup(groupId) {
-    return this.post(`/api/miniapp/groups/${groupId}/leave`);
-  }
-
-  async getGroupQuests(groupId) {
-    return this.get(`/api/miniapp/groups/${groupId}/quests`);
-  }
-
-  async createGroupQuest(groupId, data) {
-    return this.post(`/api/miniapp/groups/${groupId}/quests`, data);
-  }
-
-  async resolveGroupQuest(groupId, questId, data) {
-    return this.post(`/api/miniapp/groups/${groupId}/quests/${questId}/resolve`, data);
-  }
-
-  // ============================================
-  // VAULT ENDPOINTS
-  // ============================================
-
-  async getVaultStatus() {
-    return this.get('/api/miniapp/vault');
-  }
-
-  async getRedemptionInfo() {
-    return this.get('/api/redemption/info');
-  }
-
-  async requestRedemption(data) {
-    return this.post('/api/redemption/request', data);
-  }
-
-  // ============================================
-  // LEADERBOARD ENDPOINTS
-  // ============================================
-
-  async getLeaderboard(type = 'global', params = {}) {
-    return this.get(`/api/miniapp/leaderboard/${type}`, params);
-  }
-
-  // ============================================
-  // SHOP ENDPOINTS
-  // ============================================
-
-  async getShopItems() {
-    return this.get('/api/miniapp/shop/items');
-  }
-
-  async purchaseItem(itemId) {
-    return this.post(`/api/miniapp/shop/purchase/${itemId}`);
-  }
-
-  async getBoosters() {
-    return this.get('/api/miniapp/shop/boosters');
-  }
-
-  async activateBooster(boosterId) {
-    return this.post(`/api/miniapp/shop/boosters/${boosterId}/activate`);
+  // ==========================================
+  // ADS
+  // ==========================================
+  
+  claimAdReward(data) {
+    return this.post('/api/miniapp/ads/reward', data);
   }
 }
 
-// Export singleton instance
-export const api = new ApiService();
+const api = new ApiService();
 export default api;

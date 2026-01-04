@@ -1,354 +1,285 @@
 /**
- * Telegram Mini App Service
- * Wraps Telegram WebApp SDK functionality
+ * MintIQ Telegram Service
  */
 
 class TelegramService {
   constructor() {
-    this.tg = window.Telegram?.WebApp;
-    this.isAvailable = !!this.tg;
+    this.webapp = null;
   }
 
-  // ============================================
-  // INITIALIZATION
-  // ============================================
+  // Initialize
+  init() {
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+      this.webapp = window.Telegram.WebApp;
+    }
+    return this;
+  }
 
+  // Get WebApp instance
   get webApp() {
-    return this.tg;
+    return this.webapp;
   }
 
-  get initData() {
-    return this.tg?.initData || '';
+  // Check if Telegram WebApp is available
+  get isAvailable() {
+    return !!(this.webapp || (typeof window !== 'undefined' && window.Telegram?.WebApp));
   }
 
-  get initDataUnsafe() {
-    return this.tg?.initDataUnsafe || {};
-  }
-
-  get user() {
-    return this.initDataUnsafe.user || null;
-  }
-
-  get startParam() {
-    return this.initDataUnsafe.start_param || null;
-  }
-
-  get colorScheme() {
-    return this.tg?.colorScheme || 'dark';
-  }
-
-  get themeParams() {
-    return this.tg?.themeParams || {};
-  }
-
-  get platform() {
-    return this.tg?.platform || 'unknown';
-  }
-
-  get version() {
-    return this.tg?.version || '6.0';
-  }
-
-  get viewportHeight() {
-    return this.tg?.viewportHeight || window.innerHeight;
-  }
-
-  get viewportStableHeight() {
-    return this.tg?.viewportStableHeight || window.innerHeight;
-  }
-
-  get isExpanded() {
-    return this.tg?.isExpanded || false;
-  }
-
-  // ============================================
-  // METHODS
-  // ============================================
-
+  // Ready signal
   ready() {
-    this.tg?.ready();
+    this.webapp?.ready();
   }
 
+  // Expand to full screen
   expand() {
-    this.tg?.expand();
+    this.webapp?.expand();
   }
 
+  // Close app
   close() {
-    this.tg?.close();
+    this.webapp?.close();
   }
 
-  // ============================================
-  // MAIN BUTTON
-  // ============================================
-
-  showMainButton(text, onClick, options = {}) {
-    if (!this.tg?.MainButton) return;
-
-    const mainButton = this.tg.MainButton;
-    
-    mainButton.setText(text);
-    
-    if (options.color) {
-      mainButton.setParams({ color: options.color });
-    }
-    
-    if (options.textColor) {
-      mainButton.setParams({ text_color: options.textColor });
-    }
-
-    // Remove previous listener
-    mainButton.offClick(onClick);
-    mainButton.onClick(onClick);
-    
-    if (options.isActive !== false) {
-      mainButton.enable();
-    } else {
-      mainButton.disable();
-    }
-
-    if (options.isLoading) {
-      mainButton.showProgress();
-    } else {
-      mainButton.hideProgress();
-    }
-
-    mainButton.show();
+  // Get init data
+  get initData() {
+    return this.webapp?.initData || '';
   }
 
-  hideMainButton() {
-    this.tg?.MainButton?.hide();
+  // Get init data unsafe (parsed)
+  get initDataUnsafe() {
+    return this.webapp?.initDataUnsafe || {};
   }
 
-  setMainButtonLoading(isLoading) {
-    if (isLoading) {
-      this.tg?.MainButton?.showProgress();
-    } else {
-      this.tg?.MainButton?.hideProgress();
-    }
+  // Get user
+  get user() {
+    return this.webapp?.initDataUnsafe?.user || null;
   }
 
-  // ============================================
-  // BACK BUTTON
-  // ============================================
-
-  showBackButton(onClick) {
-    if (!this.tg?.BackButton) return;
-    
-    this.tg.BackButton.onClick(onClick);
-    this.tg.BackButton.show();
+  // Get start param
+  get startParam() {
+    return this.webapp?.initDataUnsafe?.start_param || null;
   }
 
-  hideBackButton() {
-    this.tg?.BackButton?.hide();
-  }
-
-  // ============================================
-  // HAPTIC FEEDBACK
-  // ============================================
-
+  // Haptic feedback
   hapticImpact(style = 'medium') {
-    // style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft'
-    this.tg?.HapticFeedback?.impactOccurred(style);
+    try {
+      this.webapp?.HapticFeedback?.impactOccurred(style);
+    } catch (e) {
+      // Fallback: vibrate if available
+      if (navigator.vibrate) {
+        const durations = { light: 10, medium: 20, heavy: 30 };
+        navigator.vibrate(durations[style] || 20);
+      }
+    }
   }
 
   hapticNotification(type = 'success') {
-    // type: 'error' | 'success' | 'warning'
-    this.tg?.HapticFeedback?.notificationOccurred(type);
+    try {
+      this.webapp?.HapticFeedback?.notificationOccurred(type);
+    } catch (e) {
+      if (navigator.vibrate) {
+        navigator.vibrate(type === 'error' ? [50, 50, 50] : 50);
+      }
+    }
   }
 
   hapticSelection() {
-    this.tg?.HapticFeedback?.selectionChanged();
-  }
-
-  // ============================================
-  // POPUPS & ALERTS
-  // ============================================
-
-  showAlert(message, callback) {
-    if (this.tg?.showAlert) {
-      this.tg.showAlert(message, callback);
-    } else {
-      alert(message);
-      callback?.();
+    try {
+      this.webapp?.HapticFeedback?.selectionChanged();
+    } catch (e) {
+      // Silent fail
     }
   }
 
-  showConfirm(message, callback) {
-    if (this.tg?.showConfirm) {
-      this.tg.showConfirm(message, callback);
-    } else {
-      const result = confirm(message);
-      callback?.(result);
-    }
-  }
-
-  showPopup(params, callback) {
-    if (this.tg?.showPopup) {
-      this.tg.showPopup(params, callback);
-    }
-  }
-
-  // ============================================
-  // SHARING & LINKS
-  // ============================================
-
+  // Open link
   openLink(url, options = {}) {
-    if (this.tg?.openLink) {
-      this.tg.openLink(url, options);
-    } else {
+    try {
+      if (options.tryInstantView) {
+        this.webapp?.openLink(url, { try_instant_view: true });
+      } else {
+        this.webapp?.openLink(url);
+      }
+    } catch (e) {
       window.open(url, '_blank');
     }
   }
 
+  // Open Telegram link
   openTelegramLink(url) {
-    if (this.tg?.openTelegramLink) {
-      this.tg.openTelegramLink(url);
-    } else {
+    try {
+      this.webapp?.openTelegramLink(url);
+    } catch (e) {
       window.open(url, '_blank');
     }
   }
 
+  // Share URL
   shareUrl(url, text = '') {
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
     this.openTelegramLink(shareUrl);
   }
 
-  // ============================================
-  // CLIPBOARD
-  // ============================================
-
-  async readClipboard() {
-    if (this.tg?.readTextFromClipboard) {
-      return new Promise((resolve) => {
-        this.tg.readTextFromClipboard(resolve);
-      });
-    }
-    return navigator.clipboard.readText();
-  }
-
-  async writeClipboard(text) {
-    return navigator.clipboard.writeText(text);
-  }
-
-  // ============================================
-  // QR SCANNER
-  // ============================================
-
-  showQRScanner(text, callback) {
-    if (this.tg?.showScanQrPopup) {
-      this.tg.showScanQrPopup({ text }, callback);
+  // Open invoice (Stars payment)
+  openInvoice(url, callback) {
+    try {
+      this.webapp?.openInvoice(url, callback);
+    } catch (e) {
+      console.error('Invoice error:', e);
+      callback?.('failed');
     }
   }
 
-  closeQRScanner() {
-    this.tg?.closeScanQrPopup();
+  // Show popup
+  showPopup(params, callback) {
+    try {
+      this.webapp?.showPopup(params, callback);
+    } catch (e) {
+      // Fallback to browser alert
+      const result = window.confirm(params.message || params.title);
+      callback?.(result ? 'ok' : 'cancel');
+    }
   }
 
-  // ============================================
-  // THEME & COLORS
-  // ============================================
+  // Show alert
+  showAlert(message, callback) {
+    try {
+      this.webapp?.showAlert(message, callback);
+    } catch (e) {
+      window.alert(message);
+      callback?.();
+    }
+  }
 
+  // Show confirm
+  showConfirm(message, callback) {
+    try {
+      this.webapp?.showConfirm(message, callback);
+    } catch (e) {
+      const result = window.confirm(message);
+      callback?.(result);
+    }
+  }
+
+  // Set header color
   setHeaderColor(color) {
-    this.tg?.setHeaderColor(color);
+    try {
+      this.webapp?.setHeaderColor(color);
+    } catch (e) {
+      // Silent fail
+    }
   }
 
+  // Set background color
   setBackgroundColor(color) {
-    this.tg?.setBackgroundColor(color);
+    try {
+      this.webapp?.setBackgroundColor(color);
+    } catch (e) {
+      // Silent fail
+    }
   }
 
-  // ============================================
-  // CLOUD STORAGE
-  // ============================================
+  // Enable/disable closing confirmation
+  enableClosingConfirmation() {
+    try {
+      this.webapp?.enableClosingConfirmation();
+    } catch (e) {}
+  }
 
+  disableClosingConfirmation() {
+    try {
+      this.webapp?.disableClosingConfirmation();
+    } catch (e) {}
+  }
+
+  // Main button
+  showMainButton(text, callback, options = {}) {
+    try {
+      const btn = this.webapp?.MainButton;
+      if (btn) {
+        btn.text = text;
+        btn.onClick(callback);
+        if (options.color) btn.color = options.color;
+        if (options.textColor) btn.textColor = options.textColor;
+        btn.show();
+      }
+    } catch (e) {}
+  }
+
+  hideMainButton() {
+    try {
+      this.webapp?.MainButton?.hide();
+    } catch (e) {}
+  }
+
+  // Back button
+  showBackButton(callback) {
+    try {
+      const btn = this.webapp?.BackButton;
+      if (btn) {
+        btn.onClick(callback);
+        btn.show();
+      }
+    } catch (e) {}
+  }
+
+  hideBackButton() {
+    try {
+      this.webapp?.BackButton?.hide();
+    } catch (e) {}
+  }
+
+  // Cloud storage
   async getStorageItem(key) {
-    if (!this.tg?.CloudStorage) return null;
-    
     return new Promise((resolve) => {
-      this.tg.CloudStorage.getItem(key, (error, value) => {
-        resolve(error ? null : value);
-      });
+      try {
+        this.webapp?.CloudStorage?.getItem(key, (err, value) => {
+          resolve(err ? null : value);
+        });
+      } catch {
+        resolve(null);
+      }
     });
   }
 
   async setStorageItem(key, value) {
-    if (!this.tg?.CloudStorage) return false;
-    
     return new Promise((resolve) => {
-      this.tg.CloudStorage.setItem(key, value, (error) => {
-        resolve(!error);
-      });
+      try {
+        this.webapp?.CloudStorage?.setItem(key, value, (err) => {
+          resolve(!err);
+        });
+      } catch {
+        resolve(false);
+      }
     });
   }
 
-  async removeStorageItem(key) {
-    if (!this.tg?.CloudStorage) return false;
-    
-    return new Promise((resolve) => {
-      this.tg.CloudStorage.removeItem(key, (error) => {
-        resolve(!error);
-      });
-    });
+  // Theme
+  get colorScheme() {
+    return this.webapp?.colorScheme || 'dark';
   }
 
-  // ============================================
-  // BIOMETRIC
-  // ============================================
-
-  get isBiometricAvailable() {
-    return this.tg?.BiometricManager?.isInited && 
-           this.tg?.BiometricManager?.isBiometricAvailable;
+  get themeParams() {
+    return this.webapp?.themeParams || {};
   }
 
-  async requestBiometric() {
-    if (!this.tg?.BiometricManager) return false;
-    
-    return new Promise((resolve) => {
-      this.tg.BiometricManager.authenticate({
-        reason: 'Confirm your identity'
-      }, (success) => {
-        resolve(success);
-      });
-    });
+  // Platform
+  get platform() {
+    return this.webapp?.platform || 'unknown';
   }
 
-  // ============================================
-  // EVENTS
-  // ============================================
-
-  onEvent(eventType, callback) {
-    this.tg?.onEvent(eventType, callback);
+  get version() {
+    return this.webapp?.version || '0.0';
   }
 
-  offEvent(eventType, callback) {
-    this.tg?.offEvent(eventType, callback);
-  }
-
-  // ============================================
-  // INVOICE
-  // ============================================
-
-  openInvoice(url, callback) {
-    if (this.tg?.openInvoice) {
-      this.tg.openInvoice(url, callback);
+  // Check if feature supported
+  isVersionAtLeast(version) {
+    try {
+      return this.webapp?.isVersionAtLeast(version) || false;
+    } catch {
+      return false;
     }
-  }
-
-  // ============================================
-  // SETTINGS BUTTON
-  // ============================================
-
-  showSettingsButton(onClick) {
-    if (!this.tg?.SettingsButton) return;
-    
-    this.tg.SettingsButton.onClick(onClick);
-    this.tg.SettingsButton.show();
-  }
-
-  hideSettingsButton() {
-    this.tg?.SettingsButton?.hide();
   }
 }
 
-// Export singleton instance
-export const telegram = new TelegramService();
+const telegram = new TelegramService();
 export default telegram;
