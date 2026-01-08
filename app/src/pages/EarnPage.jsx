@@ -45,7 +45,7 @@ const WHEEL_PRIZES = [
 // ============================================
 
 function EnhancedSpinWheel({ spinsLeft, onSpin, onClose }) {
-  const { showToast } = useUIStore();
+  const { showToast, showCelebration } = useUIStore();
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState(null);
@@ -111,13 +111,11 @@ function EnhancedSpinWheel({ spinsLeft, onSpin, onClose }) {
       const segmentAngle = 360 / WHEEL_PRIZES.length;
       const targetAngle = 360 - (prizeIndex * segmentAngle) - (segmentAngle / 2);
       
-      // Fix: Calculate additional rotation needed from current position
-      const currentAngle = rotation % 360;
-      const additionalRotation = (targetAngle - currentAngle + 360) % 360;
-      const spins = 5 + Math.random() * 3;
-      const finalRotation = rotation + (spins * 360) + additionalRotation;
+      // FIX: Use whole number of spins to avoid fractional rotation offset
+      const spins = Math.floor(5 + Math.random() * 3); // 5, 6, 7, or 8 full rotations
+      const finalRotation = (spins * 360) + targetAngle;
       
-      console.log('[SpinWheel] Animation: prizeIndex=', prizeIndex, 'targetAngle=', targetAngle, 'finalAngle=', finalRotation % 360);
+      console.log('[SpinWheel] Animation: prizeIndex=', prizeIndex, 'targetAngle=', targetAngle, 'spins=', spins, 'finalAngle=', finalRotation % 360);
       
       // Capture spinsLeft from response for use in timeout
       const remainingSpins = response.spinsLeft ?? (spinsLeft - 1);
@@ -128,9 +126,16 @@ function EnhancedSpinWheel({ spinsLeft, onSpin, onClose }) {
         setResult(prize);
         setIsSpinning(false);
         try {
-          telegram.hapticNotification(prize.isJackpot ? 'success' : 'success');
+          telegram.hapticNotification('success');
         } catch (e) {}
-        showToast?.(`+${prizeValue} SATZ won!`, 'success');
+        
+        // Show celebration with confetti
+        showCelebration?.('spin', { 
+          reward: prizeValue,
+          isJackpot: prize.isJackpot 
+        });
+        
+        showToast?.(`🎉 +${prizeValue} SATZ won!`, 'success');
         onSpin?.(prize, remainingSpins);
       }, 4000);
       
@@ -281,36 +286,38 @@ function StarsShop({ onClose }) {
   // Items matching backend telegramStarsService.js
   const items = [
     {
+      id: 'booster_2x_1d',
+      name: '2x Earnings (24h)',
+      desc: '🔥 Double ALL rewards for 24 hours',
+      stars: 25,
+      icon: Zap,
+      color: 'text-orange-400',
+      bgColor: 'bg-orange-500/20',
+      highlight: true
+    },
+    {
+      id: 'booster_2x_7d',
+      name: '2x Earnings (7 days)',
+      desc: '💪 Best value! Double everything for a week',
+      stars: 150,
+      icon: Flame,
+      color: 'text-red-400',
+      bgColor: 'bg-red-500/20',
+      badge: 'BEST VALUE'
+    },
+    {
       id: 'premium_monthly',
-      name: 'Premium (30 days)',
-      desc: '2x daily rewards, no ads, exclusive quests',
+      name: 'Elite Member (30 days)',
+      desc: '👑 3x spins, +50% rewards, exclusive quests',
       stars: 100,
       icon: Crown,
       color: 'text-yellow-400',
       bgColor: 'bg-yellow-500/20'
     },
     {
-      id: 'booster_2x_1d',
-      name: '2x Booster (24h)',
-      desc: 'Double all earnings for 24 hours',
-      stars: 25,
-      icon: Zap,
-      color: 'text-orange-400',
-      bgColor: 'bg-orange-500/20'
-    },
-    {
-      id: 'booster_2x_7d',
-      name: '2x Booster (7 days)',
-      desc: 'Double all earnings for 7 days',
-      stars: 150,
-      icon: Flame,
-      color: 'text-red-400',
-      bgColor: 'bg-red-500/20'
-    },
-    {
       id: 'extra_spin_3',
-      name: '3 Extra Spins',
-      desc: 'Get 3 additional lucky wheel spins',
+      name: '3 Bonus Spins',
+      desc: '🎰 Win up to 60 SATZ instantly',
       stars: 30,
       icon: Sparkles,
       color: 'text-purple-400',
@@ -318,8 +325,8 @@ function StarsShop({ onClose }) {
     },
     {
       id: 'extra_spin_10',
-      name: '10 Extra Spins',
-      desc: 'Get 10 additional lucky wheel spins',
+      name: '10 Bonus Spins',
+      desc: '🎰 Win up to 200 SATZ! Great odds',
       stars: 75,
       icon: Ticket,
       color: 'text-blue-400',
@@ -379,19 +386,31 @@ function StarsShop({ onClose }) {
         className="bg-dark-900 rounded-t-3xl w-full max-w-lg p-6 pb-8 max-h-[80vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Star className="text-yellow-400" size={22} />
-            Stars Shop
+            <Zap className="text-yellow-400" size={22} />
+            Power Ups
           </h2>
           <button onClick={onClose} className="text-dark-400">
             <X size={20} />
           </button>
         </div>
+        
+        <p className="text-sm text-dark-400 mb-6">
+          🚀 Supercharge your earnings with these power-ups!
+        </p>
 
         <div className="space-y-3">
           {items.map(item => (
-            <div key={item.id} className="bg-dark-800 rounded-2xl p-4 border border-white/5">
+            <div 
+              key={item.id} 
+              className={`bg-dark-800 rounded-2xl p-4 border ${item.highlight ? 'border-orange-500/30' : item.badge ? 'border-red-500/30' : 'border-white/5'} relative`}
+            >
+              {item.badge && (
+                <div className="absolute -top-2 right-4 px-2 py-0.5 bg-red-500 rounded-full">
+                  <span className="text-[9px] font-bold text-white">{item.badge}</span>
+                </div>
+              )}
               <div className="flex items-center gap-3">
                 <div className={`w-12 h-12 ${item.bgColor} rounded-xl flex items-center justify-center`}>
                   <item.icon size={24} className={item.color} />
@@ -704,6 +723,8 @@ export default function EarnPage() {
     setAdLoading(true);
     telegram.hapticSelection();
     
+    console.log('[WatchAd] Starting...');
+    
     try {
       // Import and use adsgram service
       const adsgram = (await import('../services/adsgram')).default;
@@ -713,9 +734,11 @@ export default function EarnPage() {
         console.log('[WatchAd] Adsgram not available, claiming reward directly');
         // If adsgram not available, still try to claim reward (for testing)
         const response = await api.post('/api/miniapp/earn/watch-ad');
+        console.log('[WatchAd] Direct response:', response);
         if (response?.success) {
           telegram.hapticNotification('success');
-          showToast(`+${response?.reward || response?.satsEarned || 50} SATZ earned!`, 'success');
+          const earnedAmount = response?.reward || response?.satsEarned || 10;
+          showToast(`🎉 +${earnedAmount} SATZ earned!`, 'success');
           await fetchUser();
         } else {
           showToast(response?.error || 'Failed to claim reward', 'error');
@@ -726,46 +749,62 @@ export default function EarnPage() {
       // Initialize if needed
       await adsgram.init();
       
-      // Show ad
-      const adResult = await adsgram.showAd();
-      console.log('[WatchAd] Ad result:', adResult);
-      
-      // Check if ad was completed (reward: true means user watched full ad)
-      if (adResult && adResult.reward !== false) {
-        // Ad completed, claim reward from backend
-        const response = await api.post('/api/miniapp/earn/watch-ad');
-        console.log('[WatchAd] Backend response:', response);
-        
-        if (response?.success) {
-          telegram.hapticNotification('success');
-          showToast(`+${response?.reward || response?.satsEarned || 50} SATZ earned!`, 'success');
-          await fetchUser();
-        } else {
-          showToast(response?.error || 'Failed to claim reward', 'error');
+      // Show ad - this returns when ad is closed (completed or not)
+      console.log('[WatchAd] Showing ad...');
+      let adResult;
+      try {
+        adResult = await adsgram.showAd();
+        console.log('[WatchAd] Ad result:', JSON.stringify(adResult));
+      } catch (adError) {
+        console.log('[WatchAd] Ad error (user may have closed early):', adError.message);
+        // Check if user closed ad early
+        if (adError.message?.toLowerCase().includes('close') || 
+            adError.message?.toLowerCase().includes('skip') ||
+            adError.message?.toLowerCase().includes('cancel')) {
+          showToast('Watch the full ad to earn rewards', 'info');
+          return;
         }
+        throw adError;
+      }
+      
+      // If we get here, ad was shown successfully
+      // Grant reward regardless of adResult.done/reward status
+      // (Some SDKs don't reliably report completion)
+      console.log('[WatchAd] Ad completed, claiming reward...');
+      const response = await api.post('/api/miniapp/earn/watch-ad');
+      console.log('[WatchAd] Backend response:', JSON.stringify(response));
+      
+      if (response?.success) {
+        telegram.hapticNotification('success');
+        const earnedAmount = response?.reward || response?.satsEarned || 10;
+        showToast(`🎉 +${earnedAmount} SATZ earned!`, 'success');
+        await fetchUser();
       } else {
-        showToast('Watch the full ad to earn rewards', 'info');
+        showToast(response?.error || 'Failed to claim reward', 'error');
       }
     } catch (e) {
-      console.error('[WatchAd] Error:', e);
-      if (e.message?.includes('not available')) {
-        // Try direct claim anyway for development/testing
+      console.error('[WatchAd] Error:', e.message);
+      
+      if (e.message?.includes('not available') || e.message?.includes('no fill')) {
+        // No ad inventory - try direct claim for testing
+        console.log('[WatchAd] No ads, trying direct claim...');
         try {
           const response = await api.post('/api/miniapp/earn/watch-ad');
           if (response?.success) {
             telegram.hapticNotification('success');
-            showToast(`+${response?.reward || 50} SATZ earned!`, 'success');
+            const earnedAmount = response?.reward || 10;
+            showToast(`🎉 +${earnedAmount} SATZ earned!`, 'success');
             await fetchUser();
             return;
           }
         } catch (backendErr) {
           console.error('[WatchAd] Backend error:', backendErr);
         }
-        showToast('Ads not available right now', 'info');
+        showToast('No ads available right now', 'info');
       } else if (e.message?.includes('limit')) {
         showToast('Daily ad limit reached', 'info');
       } else {
-        showToast(e.message || 'Ad failed to load', 'error');
+        showToast('Ad failed to load. Try again.', 'error');
       }
     } finally {
       setAdLoading(false);
@@ -941,17 +980,20 @@ export default function EarnPage() {
             <p className="text-[10px] text-dark-500">+50 SATZ</p>
           </motion.button>
           
-          {/* Stars Shop */}
+          {/* Stars Shop - Boosters */}
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setShowStarsShop(true)}
-            className="bg-dark-800 border border-white/5 rounded-2xl p-4 text-center"
+            className="bg-gradient-to-br from-yellow-500/20 to-orange-500/10 border border-yellow-500/30 rounded-2xl p-4 text-center relative overflow-hidden"
           >
-            <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center mx-auto mb-2">
-              <Star size={20} className="text-yellow-400" />
+            <div className="absolute top-1 right-1 px-2 py-0.5 bg-yellow-500 rounded-full">
+              <span className="text-[8px] font-bold text-black">2X</span>
             </div>
-            <p className="text-xs font-medium text-white">Stars Shop</p>
-            <p className="text-[10px] text-dark-500">Boosts</p>
+            <div className="w-10 h-10 bg-yellow-500/30 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <Zap size={20} className="text-yellow-400" />
+            </div>
+            <p className="text-xs font-bold text-yellow-400">Power Ups</p>
+            <p className="text-[10px] text-dark-400">Double earnings!</p>
           </motion.button>
         </div>
 

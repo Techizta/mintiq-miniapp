@@ -1,10 +1,12 @@
 import { useEffect, Suspense, lazy, Component } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from './stores/userStore';
+import { useUIStore } from './stores/uiStore';
 import BottomNav from './components/layout/BottomNav';
 import LoadingScreen from './components/shared/LoadingScreen';
 import telegram from './services/telegram';
-import { RefreshCw, AlertTriangle } from 'lucide-react';
+import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Info } from 'lucide-react';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const PoolsPage = lazy(() => import('./pages/PoolsPage'));
@@ -76,6 +78,7 @@ class AppErrorBoundary extends Component {
 
 function AppContent() {
   const { initialize } = useUserStore();
+  const { toast, hideToast } = useUIStore();
 
   useEffect(() => {
     console.log('[MintIQ] Initializing app...');
@@ -85,6 +88,13 @@ function AppContent() {
     // Initialize handles both auth and user data fetching
     initialize();
   }, []);
+
+  const toastIcons = {
+    success: CheckCircle,
+    error: XCircle,
+    info: Info,
+  };
+  const ToastIcon = toast ? (toastIcons[toast.type] || Info) : null;
 
   return (
     <div className="min-h-screen bg-dark-950 text-white">
@@ -108,6 +118,28 @@ function AppContent() {
         </Routes>
       </Suspense>
       <BottomNav />
+      
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-4 left-4 right-4 z-[100] pointer-events-auto"
+          >
+            <div className={`
+              flex items-center gap-3 px-4 py-3 rounded-xl backdrop-blur-lg border
+              ${toast.type === 'success' ? 'bg-green-500/20 border-green-500/30 text-green-400' : ''}
+              ${toast.type === 'error' ? 'bg-red-500/20 border-red-500/30 text-red-400' : ''}
+              ${toast.type === 'info' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400' : ''}
+            `}>
+              {ToastIcon && <ToastIcon size={20} />}
+              <p className="flex-1 text-sm font-medium text-white">{toast.message}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

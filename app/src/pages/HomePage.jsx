@@ -40,6 +40,12 @@ const formatNumber = (num) => {
   return num.toLocaleString();
 };
 
+// Full number format for balance display (no abbreviation)
+const formatExact = (num) => {
+  if (!num && num !== 0) return '0';
+  return Number(num).toLocaleString();
+};
+
 const getTimeInfo = (deadline) => {
   if (!deadline) return { text: 'Open', urgent: false };
   const diff = new Date(deadline) - new Date();
@@ -234,10 +240,10 @@ function DailyJackpotCard() {
       try {
         const data = await api.get('/api/miniapp/jackpot/daily');
         if (data) setJackpot(data);
-        else setJackpot({ pool: 50000, entries: 0, userEntered: false });
+        else setJackpot({ pool: 500, entries: 0, userEntered: false });
       } catch (e) {
         // Use default values on error
-        setJackpot({ pool: 50000, entries: 0, userEntered: false });
+        setJackpot({ pool: 500, entries: 0, userEntered: false });
       } finally {
         setIsLoading(false);
       }
@@ -273,7 +279,7 @@ function DailyJackpotCard() {
       setTimeout(() => setShowConfetti(false), 3000);
       
       // Show celebration
-      showCelebration('jackpot', { pool: jackpot.pool });
+      
       telegram.hapticNotification('success');
       
       showToast('🎰 You\'re in! Good luck!', 'success');
@@ -562,7 +568,7 @@ function QuickPredictModal({ quest, onClose, onPredict }) {
 
         {/* Amount Selection */}
         <div className="mb-4">
-          <p className="text-xs text-dark-400 mb-2">Amount (Balance: {formatNumber(balance)} SATZ)</p>
+          <p className="text-xs text-dark-400 mb-2">Amount (Balance: {formatExact(balance)} SATZ)</p>
           <div className="flex gap-2 flex-wrap">
             {quickAmounts.map(amt => (
               <button
@@ -708,11 +714,7 @@ export default function HomePage() {
       setShowClaimSuccess(true);
       
       // Also show confetti via celebration system
-      showCelebration('daily', { 
-        amount: result?.satsEarned || result?.reward || dailyReward.streakReward,
-        streak: result?.streak || (dailyReward.currentStreak || 0) + 1
-      });
-      
+        
       await fetchUser();
       await fetchDailyReward();
     } catch (error) {
@@ -728,7 +730,7 @@ export default function HomePage() {
     setQuickPredictQuest(quest);
   };
 
-  const miningProgress = tapStats ? Math.min(((tapStats.minedToday || 0) / (tapStats.dailyCap || 100)) * 100, 100) : 0;
+  const miningProgress = tapStats ? Math.min(((tapStats.dailyMined || tapStats.minedToday || 0) / (tapStats.dailyCap || 100)) * 100, 100) : 0;
   const hotQuest = hotQuests[0];
   const timeInfo = hotQuest ? getTimeInfo(hotQuest.betting_deadline) : { text: '', urgent: false };
 
@@ -806,7 +808,7 @@ export default function HomePage() {
           {/* Balance */}
           <Link to="/wallet">
             <div className="text-right">
-              <p className="text-2xl font-bold text-white">{formatNumber(balance)}</p>
+              <p className="text-2xl font-bold text-white">{formatExact(balance)}</p>
               <p className="text-xs text-dark-500">SATZ</p>
             </div>
           </Link>
@@ -923,7 +925,7 @@ export default function HomePage() {
                   <span className="text-sm font-medium text-white">Today's Mining</span>
                 </div>
                 <span className="text-xs text-dark-400">
-                  {(tapStats.minedToday || 0).toFixed(0)}/{tapStats.dailyCap || 500}
+                  {(tapStats.dailyMined || tapStats.minedToday || 0).toFixed(0)}/{tapStats.dailyCap || 100}
                 </span>
               </div>
               <div className="h-2.5 bg-dark-700 rounded-full overflow-hidden">

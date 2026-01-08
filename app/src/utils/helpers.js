@@ -5,6 +5,12 @@ export const formatSatz = (amount) => {
   return num.toLocaleString();
 };
 
+// Full number format for wallet balance (no abbreviation)
+export const formatExact = (amount) => {
+  const num = Number(amount) || 0;
+  return num.toLocaleString();
+};
+
 export const formatCompact = (num) => {
   if (!num && num !== 0) return '0';
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';

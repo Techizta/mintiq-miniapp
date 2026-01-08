@@ -21,7 +21,7 @@ import { useUserStore } from '../stores/userStore';
 import { useUIStore } from '../stores/uiStore';
 import api from '../services/api';
 import telegram from '../services/telegram';
-import { formatSatz } from '../utils/helpers';
+import { formatSatz, formatExact } from '../utils/helpers';
 
 // ============================================
 // TRANSACTION ITEM
@@ -97,7 +97,7 @@ function TransactionItem({ tx }) {
         </p>
       </div>
       <p className={`text-sm font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-        {isPositive ? '+' : ''}{formatSatz(amount)}
+        {isPositive ? '+' : ''}{formatExact(amount)}
       </p>
     </motion.div>
   );
@@ -202,7 +202,7 @@ export default function WalletPage() {
         >
           <p className="text-dark-400 text-sm mb-1">Your Balance</p>
           <p className="text-4xl font-bold text-white mb-1">
-            {formatSatz(balance)} <span className="text-lg text-dark-400">SATZ</span>
+            {formatExact(balance)} <span className="text-lg text-dark-400">SATZ</span>
           </p>
           <p className="text-xs text-dark-500">
             🚀 Token launch coming soon!
@@ -216,7 +216,7 @@ export default function WalletPage() {
               <TrendingUp size={16} />
               <span className="text-xs">Total Earned</span>
             </div>
-            <p className="text-xl font-bold text-green-400">+{formatSatz(totalEarned)}</p>
+            <p className="text-xl font-bold text-green-400">+{formatExact(totalEarned)}</p>
           </div>
           
           <div className="bg-dark-800/50 rounded-xl p-4 border border-white/5">
@@ -224,7 +224,7 @@ export default function WalletPage() {
               <Target size={16} />
               <span className="text-xs">Total Spent</span>
             </div>
-            <p className="text-xl font-bold text-red-400">-{formatSatz(totalSpent)}</p>
+            <p className="text-xl font-bold text-red-400">-{formatExact(totalSpent)}</p>
           </div>
 
           <div className="bg-dark-800/50 rounded-xl p-4 border border-white/5">
@@ -242,7 +242,7 @@ export default function WalletPage() {
               <span className="text-xs">Win Rate</span>
             </div>
             <p className="text-xl font-bold text-white">{winRate}%</p>
-            <p className="text-xs text-dark-500">{formatSatz(totalWon)} won</p>
+            <p className="text-xs text-dark-500">{formatExact(totalWon)} won</p>
           </div>
         </div>
 
